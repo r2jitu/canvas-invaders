@@ -1,3 +1,6 @@
+// The global game instance
+var game;
+
 var Util = {
     extend: function (self, parent) {
         self.prototype = new parent();
@@ -12,8 +15,41 @@ var Util = {
 };
 
 Game = (function () {
-    function Game() {
+    function Game(config) {
+        this.menu = config.menu;
+        this.highscores = config.highscores;
+        this.stages = config.stages;
+
+        this.canvas = document.getElementById(config.canvas);
+        this.ctx = this.canvas.getContext("2d");
+
+        this.currentScreen = this.menu;
+
+        this.fps = Util.default_arg(config.fps, 60);
+        this.delay = 1000 / this.fps;
+        this.interval = null;
     }
+
+    Game.prototype.start = function () {
+        this.reume();
+    };
+
+    Game.prototype.pause = function () {
+        if (this.interval)
+            clearInterval(this.interval);
+        this.interval = null;
+    };
+
+    Game.prototype.resume = function () {
+        var self = this;
+        this.interval = setInterval(function() {
+            self.mainLoop();
+        }, this.delay);
+    };
+
+    Game.prototype.mainLoop() {
+        this.currentScreen.render();
+    };
 
     return Game;
 })();
@@ -68,20 +104,23 @@ Object = (function () {
     return Object;
 })();
 
-var menuScreen = new Menu();
-var highScoresScreen = new HighScores();
-
-// TODO: Pass in the config for the stage
-var stage1 = new Stage({});
-var stage2 = new Stage({});
-var stage3 = new Stage({});
-
-var game = new Game({
-    menu: menuScreen,
-    highScores: highScoresScreen,
-    stages: [stage1, stage2, stage3]
-});
-
 document.onload = function () {
+    // Create and start the game
+
+    var menuScreen = new Menu();
+    var highscoresScreen = new HighScores();
+
+    // TODO: Pass in the config for the stage
+    var stage1 = new Stage({});
+    var stage2 = new Stage({});
+    var stage3 = new Stage({});
+
+    game = new Game({
+        canvas: "game",
+        menu: menuScreen,
+        highscores: highscoresScreen,
+        stages: [stage1, stage2, stage3]
+    });
+
     game.start();
 }
