@@ -40,6 +40,15 @@ var Util = {
 };
 
 Game = (function () {
+    var events = {
+        "click": "onClick",
+        "mousedown": "onMouseDown",
+        "mouseup": "onMouseUp",
+        "keydown": "onKeyDown",
+        "keyup": "onKeyUp",
+        "keypress": "onKeyPress"
+    };
+
     function Game(config) {
         this.menu = config.menu;
         this.highscores = config.highscores;
@@ -50,9 +59,22 @@ Game = (function () {
 
         this.curScreen = this.menu;
 
+        // Compute update rate
         this.fps = Util.default_arg(config.fps, 60);
         this.delay = 1000 / this.fps;
         this.interval = null;
+
+        // Add event listeners
+        var self = this;
+        events.forEach(function (evname) {
+            self.canvas.addEventListener(evname, function (e) {
+                // Call the screen's handler if it has one
+                var handler = events[name];
+                if (typeof this.curScreen[handler] === "function") {
+                    this.curScreen[handler](e);
+                }
+            });
+        });
     }
 
     Game.prototype.start = function () {
@@ -203,10 +225,10 @@ function startGame() {
     // TODO: Pass in the config for the stage
 
     var platoons1 = {
-        rows: 1,
-        cols: 5,
         startx: 0,
-        starty: 0
+        starty: 0,
+        layout: [
+        ]
     };
     var stage1 = new Stage({});
     
@@ -229,4 +251,5 @@ function init() {
         startGame()
     });
 }
+
 window.onload = init;
