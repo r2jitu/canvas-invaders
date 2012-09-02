@@ -7,6 +7,4 @@ body {
 
 canvas#game {
     border: 5px solid black;
-    width: 600px;
-    height: 600px;
 }

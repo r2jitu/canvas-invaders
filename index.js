@@ -24,7 +24,7 @@ Game = (function () {
         this.canvas = document.getElementById(config.canvas);
         this.ctx = this.canvas.getContext("2d");
 
-        this.curScreen = this.stages[0];
+        this.curScreen = this.menu;
 
         this.fps = Util.default_arg(config.fps, 60);
         this.delay = 1000 / this.fps;
@@ -43,13 +43,14 @@ Game = (function () {
 
     Game.prototype.resume = function () {
         var self = this;
+        
         this.interval = setInterval(function() {
             self.mainLoop();
         }, this.delay);
     };
 
     Game.prototype.mainLoop = function () {
-        this.curScreen.render();
+        this.curScreen.render(this.ctx);
     };
 
     return Game;
@@ -58,7 +59,7 @@ Game = (function () {
 Screen = (function () {
     function Screen() {}
 
-    Screen.prototype.render = function() {
+    Screen.prototype.render = function(ctx) {
       console.log("render not implemented for Screen");
     };
 
@@ -71,10 +72,10 @@ Menu = (function () {
     Util.extend(Menu, Screen);
     
     Menu.prototype.render = function(ctx) {
-      console.log("render not implemented for Menu");
-      ctx.font = "60px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText("Canvas Invaders", 200, 200);
+        console.log("render not implemented for Menu");
+        ctx.font = "12px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("Canvas Invaders", 20, 20);
     };
 
     return Menu;
@@ -85,7 +86,7 @@ HighScores = (function () {
 
     Util.extend(HighScores, Screen);
     
-    HighScores.prototype.render = function() {
+    HighScores.prototype.render = function(ctx) {
       console.log("render not implemented for HighScores");
     };
     
@@ -97,7 +98,7 @@ Stage = (function () {
     
     Util.extend(Stage, Screen);
 
-    Stage.prototype.render = function() {
+    Stage.prototype.render = function(ctx) {
       // Render background
       console.log("render not implemented for Stage");
     };
@@ -118,7 +119,7 @@ Object = (function () {
         this.sprite = Util.default_arg(sprite, "default.png");
     }
 
-    Object.prototype.render = function () {
+    Object.prototype.render = function (ctx) {
         // TODO: This does useful stuff (common render code)
         console.log("render not implemented for Object");
     };
@@ -157,7 +158,7 @@ Sprite = (function () {
     return Sprite;
 });
 
-document.onload = function () {
+window.onload = function () {
     // Create and start the game
 
     var menuScreen = new Menu();
@@ -165,12 +166,12 @@ document.onload = function () {
 
     // TODO: Pass in the config for the stage
 
-    var platoons1 = [
+    var platoons1 = {
         rows: 1,
         cols: 5,
         startx: 0,
         starty: 0
-    ];
+    };
     var stage1 = new Stage({});
     
     var stage2 = new Stage({});
