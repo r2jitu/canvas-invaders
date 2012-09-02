@@ -1,5 +1,5 @@
 // The global game instance
-var game;
+var game, sprites;
 
 var Util = {
     extend: function (self, parent) {
@@ -12,6 +12,23 @@ var Util = {
             return def;
         else
             return val;
+    },
+    load_sprites = function (paths, cb) {
+        var sprites = {};
+        var remain_sprites = 0;
+
+        function finished() {
+            remain_sprites--;
+            if (remain_sprites === 0) {
+                cb(sprites);
+            }
+        }
+
+        for (var p in paths) {
+            sprites[p] = new Sprite(paths[p]);
+            remain_sprites++;
+            setTimeout(function () { sprites[p].load(finished); }, 0);
+        }
     }
 };
 
