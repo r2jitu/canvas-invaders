@@ -1,6 +1,5 @@
 // The global game instance
 var game, sprites;
-var bgColor = "black";
 
 var Util = {
     extend: function (self, parent) {
@@ -42,6 +41,10 @@ Game = (function () {
         this.canvas = document.getElementById(config.canvas);
         this.ctx = this.canvas.getContext("2d");
 
+        this.bgColor = "black";
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+
         this.curScreen = this.menu;
 
         this.fps = Util.default_arg(config.fps, 60);
@@ -79,7 +82,7 @@ Screen = (function () {
 
     // clears the screen
     Screen.prototype.render = function(ctx) {
-        ctx.fillStyle=bgColor;
+        ctx.fillStyle = game.bgColor;
         ctx.fillRect(0, 0, 600, 600);
     };
 
@@ -91,11 +94,22 @@ Menu = (function () {
 
     Util.extend(Menu, Screen);
     
+    // press S to start, P to pause, I for instructions
+
     Menu.prototype.render = function(ctx) {
         this._super.prototype.render(ctx);
-        ctx.font = "12px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText("Canvas Invaders", 20, 20);
+        /*
+        ctx.fillStyle = "white";
+        ctx.font = "bold 40px Arial";
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        ctx.fillText("Canvas Invaders", game.width / 2, 70);
+
+        ctx.font = "bold 30px Arial";
+        ctx.fillText("Play", game.width / 2, 270);
+        ctx.fillText("Instructions", game.width / 2, 320);
+        */
+        game.stages[0].render(ctx);
     };
 
     return Menu;
@@ -119,9 +133,16 @@ Stage = (function () {
     Util.extend(Stage, Screen);
 
     Stage.prototype.render = function(ctx) {
-      // Render background
-      console.log("render not implemented for Stage");
+        console.log("render not implemented for Stage");
     };
+    
+    // Renders background (stars)
+    function renderBg(ctx) {
+    }
+
+    // Renders user data (score, lives, weapon)
+    function renderStats(ctx) {
+    }
 
     return Stage;
 })();
