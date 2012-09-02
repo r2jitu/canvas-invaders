@@ -5,6 +5,7 @@ var Util = {
     extend: function (self, parent) {
         self.prototype = new parent();
         self.prototype.constructor = self;
+        self.prototype._super = parent;
     },
     default_arg: function (val, def) {
         if (typeof val === "undefined")
@@ -23,7 +24,7 @@ Game = (function () {
         this.canvas = document.getElementById(config.canvas);
         this.ctx = this.canvas.getContext("2d");
 
-        this.currentScreen = this.menu;
+        this.curScreen = this.menu;
 
         this.fps = Util.default_arg(config.fps, 60);
         this.delay = 1000 / this.fps;
@@ -47,8 +48,8 @@ Game = (function () {
         }, this.delay);
     };
 
-    Game.prototype.mainLoop() {
-        this.currentScreen.render();
+    Game.prototype.mainLoop = function () {
+        this.curScreen.render();
     };
 
     return Game;
@@ -85,24 +86,55 @@ Stage = (function () {
 })();
 
 Object = (function () {
-    function Object(x, y, vx, vy, ang, vang) {
+    function Object(sprite, config) {
         this.state = {
-            x: Util.default_arg(x, 0),
-            y: Util.default_arg(y, 0),
-            vx: Util.default_arg(vx, 0),
-            vy: Util.default_arg(vy, 0),
-            ang: Util.default_arg(ang, 0),
-            vang: Util.default_arg(vang, 0)
+            x: Util.default_arg(config.x, 0),
+            y: Util.default_arg(config.y, 0),
+            theta: Util.default_arg(config.theta, 0),
+            vx: Util.default_arg(config.vx, 0),
+            vy: Util.default_arg(config.vy, 0),
+            vtheta: Util.default_arg(config.vtheta, 0)
         };
-        this.sprite = "default.png";
+        this.sprite = Util.default_arg(sprite, "default.png");
     }
 
     Object.prototype.render = function () {
         // TODO: This does useful stuff (common render code)
-    }
+    };
+
+    Object.prototype.update = function (dt) {
+        this.state.x += dt * this.state.vx;
+        this.state.y += dt * this.state.vy;
+        this.state.theta += dt * this.state.vtheta;
+
+        // TODO: Collision detection
+    };
 
     return Object;
 })();
+
+Sprite = (function () {
+    function Sprite(src, width, height) {
+        this.src = src;
+        this.width = Util.default_arg(width, 0);
+        this.height = Util.default_arg(height, 0);
+    }
+
+    Sprite.prototype.load = function (cb) {
+        var self = this;
+        
+        this.image = new Image();
+        this.image.onload = function () {
+            if (!self.width) self.width = this.width;
+            if (!self.height) self.height = this.height;
+
+            cb();
+        };
+        this.image.src = this.src;
+    };
+
+    return Sprite;
+});
 
 document.onload = function () {
     // Create and start the game
@@ -111,8 +143,17 @@ document.onload = function () {
     var highscoresScreen = new HighScores();
 
     // TODO: Pass in the config for the stage
+
+    var platoons1 = [
+        rows: 1,
+        cols: 5,
+        startx: 0,
+        starty: 0
+    ];
     var stage1 = new Stage({});
+    
     var stage2 = new Stage({});
+    
     var stage3 = new Stage({});
 
     game = new Game({
