@@ -57,6 +57,10 @@ Game = (function () {
 Screen = (function () {
     function Screen() {}
 
+    Screen.prototype.render = function() {
+      console.log("render not implemented for Screen");
+    }
+
     return Screen;
 })();
 
@@ -64,6 +68,10 @@ Menu = (function () {
     function Menu() {}
 
     Util.extend(Menu, Screen);
+    
+    Menu.prototype.render = function() {
+      console.log("render not implemented for Menu");
+    } 
 
     return Menu;
 })();
@@ -72,7 +80,11 @@ HighScores = (function () {
     function HighScores() {}
 
     Util.extend(HighScores, Screen);
-
+    
+    HighScores.prototype.render = function() {
+      console.log("render not implemented for HighScores");
+    }
+    
     return HighScores;
 })();
 
@@ -80,6 +92,11 @@ Stage = (function () {
     function Stage() {}
     
     Util.extend(Stage, Screen);
+
+    Stage.prototype.render = function() {
+      // Render background
+      console.log("render not implemented for Stage");
+    }
 
     return Stage;
 })();
@@ -99,6 +116,7 @@ Object = (function () {
 
     Object.prototype.render = function () {
         // TODO: This does useful stuff (common render code)
+        console.log("render not implemented for Object");
     }
 
     return Object;
