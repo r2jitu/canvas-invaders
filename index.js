@@ -80,6 +80,9 @@ Game = (function () {
                 });
             })(evname);
         }
+
+        this.canvas.setAttribute("tabindex", 0);
+        this.canvas.focus();
     }
 
     Game.prototype.start = function () {
