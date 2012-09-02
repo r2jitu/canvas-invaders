@@ -69,15 +69,17 @@ Game = (function () {
 
         // Add event listeners
         var self = this;
-        events.forEach(function (evname) {
-            self.canvas.addEventListener(evname, function (e) {
-                // Call the screen's handler if it has one
-                var handler = events[name];
-                if (typeof this.curScreen[handler] === "function") {
-                    this.curScreen[handler](e);
-                }
-            });
-        });
+        for (var evname in events) {
+            (function (evname) {
+                self.canvas.addEventListener(evname, function (e) {
+                    // Call the screen's handler if it has one
+                    var handler = events[evname];
+                    if (typeof self.curScreen[handler] === "function") {
+                        self.curScreen[handler](e);
+                    }
+                });
+            })(evname);
+        }
     }
 
     Game.prototype.start = function () {
@@ -138,6 +140,10 @@ Menu = (function () {
         ctx.fillText("Instructions", game.width / 2, 320);
         */
         game.stages[0].render(ctx);
+    };
+
+    Menu.prototype.onClick = function(e) {
+        console.log("got click event", e);
     };
 
     return Menu;
