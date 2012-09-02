@@ -1,11 +1,12 @@
 // The global game instance
 var game, sprites;
+var bgColor = "black";
 
 var Util = {
     extend: function (self, parent) {
         self.prototype = new parent();
         self.prototype.constructor = self;
-        self.prototype._super = parent;
+        self.prototype._super = self.prototype;
     },
     default_arg: function (val, def) {
         if (typeof val === "undefined")
@@ -76,8 +77,10 @@ Game = (function () {
 Screen = (function () {
     function Screen() {}
 
+    // clears the screen
     Screen.prototype.render = function(ctx) {
-      console.log("render not implemented for Screen");
+        ctx.fillStyle=bgColor;
+        ctx.fillRect(0, 0, 600, 600);
     };
 
     return Screen;
@@ -89,7 +92,7 @@ Menu = (function () {
     Util.extend(Menu, Screen);
     
     Menu.prototype.render = function(ctx) {
-        console.log("render not implemented for Menu");
+        this._super.render(ctx);
         ctx.font = "12px Arial";
         ctx.textAlign = "left";
         ctx.fillText("Canvas Invaders", 20, 20);
