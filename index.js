@@ -1,5 +1,9 @@
 // The global game instance
 var game, sprites;
+var sprite_paths = {
+    player: "images/player.png",
+    invader: "images/invader.png"
+};
 var bgColor = "black";
 
 var Util = {
@@ -26,9 +30,11 @@ var Util = {
         }
 
         for (var p in paths) {
-            sprites[p] = new Sprite(paths[p]);
-            remain_sprites++;
-            setTimeout(function () { sprites[p].load(finished); }, 0);
+            (function (p) {
+                sprites[p] = new Sprite(paths[p]);
+                remain_sprites++;
+                setTimeout(function () { sprites[p].load(finished); }, 0);
+            })(p);
         }
     }
 };
@@ -164,11 +170,13 @@ Sprite = (function () {
 
     Sprite.prototype.load = function (cb) {
         var self = this;
+        console.log("Loading image " + self.src);
         
         this.image = new Image();
         this.image.onload = function () {
             if (!self.width) self.width = this.width;
             if (!self.height) self.height = this.height;
+            console.log("Loaded image " + self.src, self.width, self.height);
 
             cb();
         };
@@ -176,13 +184,17 @@ Sprite = (function () {
     };
 
     return Sprite;
-});
+})();
 
-function loadSprites() {}
+// Load the sprites then call the callback when they're all loaded
+function loadSprites(cb) {
+    Util.load_sprites(sprite_paths, function (sprites) {
+        window.sprites = sprites;
+        cb();
+    });
+}
 
-function startGame() {}
-
-function init() {
+function startGame() {
     // Create and start the game
 
     var menuScreen = new Menu();
@@ -210,5 +222,11 @@ function init() {
     });
 
     game.start();
+}
+
+function init() {
+    loadSprites(function () {
+        startGame()
+    });
 }
 window.onload = init;
