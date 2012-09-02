@@ -74,6 +74,7 @@ Game = (function () {
                 self.canvas.addEventListener(evname, function (e) {
                     // Call the screen's handler if it has one
                     var handler = events[evname];
+                    console.log(evname, e);
                     if (typeof self.curScreen[handler] === "function") {
                         self.curScreen[handler](e);
                     }
@@ -128,7 +129,7 @@ Menu = (function () {
 
     Menu.prototype.render = function(ctx) {
         this._super.prototype.render(ctx);
-        /*
+
         ctx.fillStyle = "white";
         ctx.font = "bold 40px Arial";
         ctx.textBaseline = "middle";
@@ -136,14 +137,14 @@ Menu = (function () {
         ctx.fillText("Canvas Invaders", game.width / 2, 70);
 
         ctx.font = "bold 30px Arial";
-        ctx.fillText("Play", game.width / 2, 270);
-        ctx.fillText("Instructions", game.width / 2, 320);
-        */
-        game.stages[0].render(ctx);
+        ctx.fillText("Play (p)", game.width / 2, 270);
+        ctx.fillText("Instructions (i)", game.width / 2, 320);
+        
+        //game.stages[0].render(ctx);
     };
 
-    Menu.prototype.onClick = function(e) {
-        console.log("got click event", e);
+    Menu.prototype.onKeyPress = function(e) {
+        console.log("got press event", e);
     };
 
     return Menu;
