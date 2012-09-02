@@ -14,7 +14,7 @@ var Util = {
         else
             return val;
     },
-    load_sprites = function (paths, cb) {
+    load_sprites: function (paths, cb) {
         var sprites = {};
         var remain_sprites = 0;
 
