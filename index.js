@@ -23,7 +23,7 @@ Game = (function () {
         this.canvas = document.getElementById(config.canvas);
         this.ctx = this.canvas.getContext("2d");
 
-        this.currentScreen = this.menu;
+        this.currentScreen = this.stages[0];
 
         this.fps = Util.default_arg(config.fps, 60);
         this.delay = 1000 / this.fps;
@@ -31,7 +31,7 @@ Game = (function () {
     }
 
     Game.prototype.start = function () {
-        this.reume();
+        this.resume();
     };
 
     Game.prototype.pause = function () {
@@ -59,7 +59,7 @@ Screen = (function () {
 
     Screen.prototype.render = function() {
       console.log("render not implemented for Screen");
-    }
+    };
 
     return Screen;
 })();
@@ -69,9 +69,12 @@ Menu = (function () {
 
     Util.extend(Menu, Screen);
     
-    Menu.prototype.render = function() {
+    Menu.prototype.render = function(ctx) {
       console.log("render not implemented for Menu");
-    } 
+      ctx.font = "60px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("Canvas Invaders", 200, 200);
+    };
 
     return Menu;
 })();
@@ -83,7 +86,7 @@ HighScores = (function () {
     
     HighScores.prototype.render = function() {
       console.log("render not implemented for HighScores");
-    }
+    };
     
     return HighScores;
 })();
@@ -96,7 +99,7 @@ Stage = (function () {
     Stage.prototype.render = function() {
       // Render background
       console.log("render not implemented for Stage");
-    }
+    };
 
     return Stage;
 })();
@@ -117,7 +120,7 @@ Object = (function () {
     Object.prototype.render = function () {
         // TODO: This does useful stuff (common render code)
         console.log("render not implemented for Object");
-    }
+    };
 
     return Object;
 })();
