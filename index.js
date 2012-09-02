@@ -175,7 +175,11 @@ Sprite = (function () {
     return Sprite;
 });
 
-window.onload = function () {
+function loadSprites() {}
+
+function startGame() {}
+
+function onload() {
     // Create and start the game
 
     var menuScreen = new Menu();
@@ -204,3 +208,5 @@ window.onload = function () {
 
     game.start();
 }
+
+window.onload = onload;
