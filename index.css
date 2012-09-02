@@ -1,0 +1,12 @@
+body {
+    margin: 0;
+    padding: 50px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+canvas#game {
+    border: 5px solid black;
+    width: 600px;
+    height: 600px;
+}
