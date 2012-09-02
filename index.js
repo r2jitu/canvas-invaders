@@ -6,7 +6,7 @@ var Util = {
     extend: function (self, parent) {
         self.prototype = new parent();
         self.prototype.constructor = self;
-        self.prototype._super = self.prototype;
+        self.prototype._super = parent;
     },
     default_arg: function (val, def) {
         if (typeof val === "undefined")
@@ -92,7 +92,7 @@ Menu = (function () {
     Util.extend(Menu, Screen);
     
     Menu.prototype.render = function(ctx) {
-        this._super.render(ctx);
+        this._super.prototype.render(ctx);
         ctx.font = "12px Arial";
         ctx.textAlign = "left";
         ctx.fillText("Canvas Invaders", 20, 20);
@@ -182,7 +182,7 @@ function loadSprites() {}
 
 function startGame() {}
 
-function onload() {
+function init() {
     // Create and start the game
 
     var menuScreen = new Menu();
@@ -211,5 +211,4 @@ function onload() {
 
     game.start();
 }
-
-window.onload = onload;
+window.onload = init;
