@@ -43,6 +43,7 @@ Game = (function () {
         "click": "onClick",
         "mousedown": "onMouseDown",
         "mouseup": "onMouseUp",
+        "mousemove": "onMouseMove",
         "keydown": "onKeyDown",
         "keyup": "onKeyUp",
         "keypress": "onKeyPress"
