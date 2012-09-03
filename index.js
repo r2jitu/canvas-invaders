@@ -82,7 +82,7 @@ Game = (function () {
 
         // Player stats
         this.playerScore = 0;
-        this.playerLives = 2;
+        this.player = null;
 
         // Compute update rate
         this.fps = Util.default_arg(fps, 60);
@@ -254,10 +254,10 @@ Stage = (function () {
         ctx.fillText(game.playerScore, scoreOffset, 15);
 
         // Lives
-        ctx.fillText("Lives:", game.width / 2, 15);
+        ctx.fillText("Health:", game.width / 2, 15);
 
-        var livesOffset = game.width / 2 + 5 + ctx.measureText("Lives:").width;
-        ctx.fillText(game.playerLives, livesOffset, 15);
+        var livesOffset = game.width / 2 + 5 + ctx.measureText("Health:").width;
+        ctx.fillText(game.player.health, livesOffset, 15);
     }
 
     return Stage;
@@ -312,6 +312,18 @@ SpaceShip = (function () {
     Util.extend(SpaceShip, Object);
 
     return SpaceShip;
+})();
+
+PlayerShip = (function () {
+    function PlayerShip() {
+        this._super.prototype.constructor.call("player");
+        
+        this.health = 100;
+    }
+
+    Util.extend(PlayerShip, SpaceShip);
+
+    return PlayerShip;
 })();
 
 Platoon = (function () {
@@ -465,6 +477,7 @@ function startGame() {
     stars = Util.generateStars();
 
     // TODO: Pass in the config for the stage
+    game.player = new PlayerShip();
 
     var platoon1 = new Platoon(300, 300, Math.PI/4, [
         ['invader', 'invader', 'invader'],
