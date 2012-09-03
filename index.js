@@ -110,8 +110,8 @@ Game = (function () {
         this.screens[name] = screen;
     };
 
-    Game.prototype.start = function (screen) {
-        this.setScreen(this.screens[screen]);
+    Game.prototype.start = function (screen_id) {
+        this.setScreen(screen_id);
         this.resume();
     };
 
@@ -133,8 +133,8 @@ Game = (function () {
         this.curScreen.render(this.ctx);
     };
 
-    Game.prototype.setScreen = function (screen) {
-        this.curScreen = screen;
+    Game.prototype.setScreen = function (screen_id) {
+        this.curScreen = this.screens[screen_id];
     }
 
     return Game;
