@@ -4,6 +4,7 @@ var sprite_paths = {
     player: "images/player.png",
     invader: "images/invader.png"
 };
+var stars;
 
 var Util = {
     extend: function (self, parent) {
@@ -35,6 +36,26 @@ var Util = {
                 setTimeout(function () { sprites[p].load(finished); }, 0);
             })(p);
         }
+    },
+    generateStars: function() {
+        var numStars = 50;
+        var stars = new Array();
+
+        for (var i = 0; i < numStars; i++) {
+            var xPos = Math.floor(Math.random() * game.width);
+            var yPos = Math.floor(Math.random() * game.height + 15);
+
+            // TODO: Fix alpha
+            var alpha = ((Math.random() * 100 + 25) / 100.0) % 1; 
+
+            stars[i] = {
+                x: xPos,
+                y: yPos,
+                a: alpha
+            };
+        }
+
+        return stars;
     }
 };
 
@@ -59,6 +80,10 @@ Game = (function () {
         this.width = this.canvas.width;
         this.height = this.canvas.height;
 
+        // Player stats
+        this.playerScore = 0;
+        this.playerLives = 2;
+
         // Compute update rate
         this.fps = Util.default_arg(fps, 60);
         this.delay = 1000 / this.fps;
@@ -71,6 +96,7 @@ Game = (function () {
                 self.canvas.addEventListener(evname, function (e) {
                     // Call the screen's handler if it has one
                     var handler = events[evname];
+                    console.log(evname, e);
                     if (typeof self.curScreen[handler] === "function") {
                         self.curScreen[handler](e);
                     }
@@ -139,7 +165,7 @@ Menu = (function () {
 
     Menu.prototype.render = function(ctx) {
         this._super.prototype.render(ctx);
-        /*
+
         ctx.fillStyle = "white";
         ctx.font = "bold 40px Arial";
         ctx.textBaseline = "middle";
@@ -147,13 +173,19 @@ Menu = (function () {
         ctx.fillText("Canvas Invaders", game.width / 2, 70);
 
         ctx.font = "bold 30px Arial";
-        ctx.fillText("Play", game.width / 2, 270);
-        ctx.fillText("Instructions", game.width / 2, 320);
-        */
+        ctx.fillText("Start Game (s)", game.width / 2, 270);
+        ctx.fillText("Instructions (i)", game.width / 2, 320);
     };
 
-    Menu.prototype.onClick = function(e) {
-        console.log("got click event", e);
+    Menu.prototype.onKeyPress = function(e) {
+        // handle user input
+       console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
+        if (String.fromCharCode(e.charCode) === "s") {
+            game.setScreen("stage1");
+        }
+        else if (String.fromCharCode(e.charCode) === "i") {
+            console.log("i");
+        }
     };
 
     return Menu;
@@ -174,18 +206,51 @@ HighScores = (function () {
 Stage = (function () {
     function Stage() {}
     
+    // Player Status bar offset
+    var statusBarOffset = 15;
+
     Util.extend(Stage, Screen);
 
     Stage.prototype.render = function(ctx) {
+        this._super.prototype.render(ctx);
+        
+        renderBg(ctx);
+        renderStats(ctx);
+
         console.log("render not implemented for Stage");
     };
     
+    
+
     // Renders background (stars)
     function renderBg(ctx) {
+        for (var i = 0; i < stars.length; i++) {
+            var star = stars[i];
+            ctx.fillStyle = "rgba(255, 255, 255," +  star.a + ")";
+            ctx.fillRect(star.x, star.y, 5, 5);
+        }
     }
 
     // Renders user data (score, lives, weapon)
     function renderStats(ctx) {
+        ctx.fillStyle = "white";
+        ctx.font = "bold 15px Arial";
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "left";
+
+        // TODO: render black box for stats
+
+        // Score
+        ctx.fillText("Score:", 10, 15);
+        
+        var scoreOffset = 10 + 5 + ctx.measureText("Score:").width;
+        ctx.fillText(game.playerScore, scoreOffset, 15);
+
+        // Lives
+        ctx.fillText("Lives:", game.width / 2, 15);
+
+        var livesOffset = game.width / 2 + 5 + ctx.measureText("Lives:").width;
+        ctx.fillText(game.playerLives, livesOffset, 15);
     }
 
     return Stage;
@@ -365,6 +430,8 @@ function startGame() {
 
     game.addScreen("menu", new Menu);
     game.addScreen("highscores", new HighScores());
+
+    stars = Util.generateStars();
 
     // TODO: Pass in the config for the stage
 
