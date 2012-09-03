@@ -203,7 +203,13 @@ Object = (function () {
             vy: Util.default_arg(config.vy, 0),
             vtheta: Util.default_arg(config.vtheta, 0)
         };
-        this.sprite = Util.default_arg(sprite, "default.png");
+
+        this.sprite = Util.default_arg(sprite, null);
+
+        if (this.sprite) {
+            this.width = this.sprite.width;
+            this.height = this.sprite.height;
+        }
     }
 
     Object.prototype.render = function (ctx) {
@@ -223,8 +229,8 @@ Object = (function () {
 })();
 
 SpaceShip = (function () {
-    function SpaceShip() {
-        this._super.prototype.constructor.apply(this, arguments);
+    function SpaceShip(type) {
+        this._super.prototype.constructor.call(this, sprites[type]);
     }
 
     Util.extend(SpaceShip, Object);
@@ -283,11 +289,12 @@ Platoon = (function () {
             this.rowHeights[i] = this.rowWidths[i] = 0;
 
             for (var j = 0; j < this.ships[i].length; j++) {
-                if (this.ships[i][j].height > this.rowHeights[i])
-                    this.rowHeights[i] = this.ships[i][j].height;
+                var ship = this.ships[i][j];
+                if (ship.height > this.rowHeights[i])
+                    this.rowHeights[i] = ship.height;
                 if (j > 0)
                     this.rowWidths[i] += this.spacing;
-                this.rowWidths[i] += this.ships[i][j].width;
+                this.rowWidths[i] += ship.width;
             }
 
             this.totalHeight += this.rowHeights[i];
@@ -313,8 +320,6 @@ Platoon = (function () {
             this.shipPositions.push(row);
             offsetY += this.rowHeights[i] + this.spacing;
         }
-
-        console.log("HI", this.shipPositions[0][0].x);
     };
 
     return Platoon;
