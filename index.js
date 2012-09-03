@@ -61,6 +61,10 @@ Game = (function () {
         this.width = this.canvas.width;
         this.height = this.canvas.height;
 
+        // Player stats
+        this.playerScore = 0;
+        this.playerLives = 2;
+
         // Compute update rate
         this.fps = Util.default_arg(config.fps, 60);
         this.delay = 1000 / this.fps;
@@ -177,13 +181,13 @@ HighScores = (function () {
 })();
 
 Stage = (function () {
+    // generate stars for stage
+    var stars = generateStars();
+
     function Stage() {}
     
     // Player Status bar offset
-    /*
-    var statusOffset;
-    var 
-    */ 
+    var statusBarOffset = 15;
 
     Util.extend(Stage, Screen);
 
@@ -196,13 +200,52 @@ Stage = (function () {
         console.log("render not implemented for Stage");
     };
     
+    // Generate star pos & alpha val; called only on game init
+    function generateStars() {
+        var numStars = 50;
+        var stars = new Array();
+
+        for (var i = 0; i < numStars; i++) {
+            var xPos = Math.floor(Math.random() * game.width);
+            var yPos = Math.floor(Math.random() * game.height + 15);
+            var alpha = Math.floor(Math.random() + 0.5); 
+
+            stars[i] = {
+                x: xPos,
+                y: yPos,
+                a: alpha
+            };
+        }
+
+        return stars;
+    }
+
     // Renders background (stars)
     function renderBg(ctx) {
+       // ctx.fillStyle = rgba(255, 255, 255, "white";
+       // ctx.fillRect(1, 1, 100, 100);
     }
 
     // Renders user data (score, lives, weapon)
     function renderStats(ctx) {
-         
+        ctx.fillStyle = "white";
+        ctx.font = "bold 15px Arial";
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "left";
+
+        // TODO: render black box for stats
+
+        // Score
+        ctx.fillText("Score:", 10, 15);
+        
+        var scoreOffset = 10 + 5 + ctx.measureText("Score:").width;
+        ctx.fillText(game.playerScore, scoreOffset, 15);
+
+        // Lives
+        ctx.fillText("Lives:", game.width / 2, 15);
+
+        var livesOffset = game.width / 2 + 5 + ctx.measureText("Lives:").width;
+        ctx.fillText(game.playerLives, livesOffset, 15);
     }
 
     return Stage;
@@ -210,6 +253,8 @@ Stage = (function () {
 
 Object = (function () {
     function Object(sprite, config) {
+        config = Util.default_arg(config, {});
+
         this.state = {
             x: Util.default_arg(config.x, 0),
             y: Util.default_arg(config.y, 0),
