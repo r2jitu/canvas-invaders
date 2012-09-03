@@ -1,6 +1,7 @@
 /*\
 |*| Canvas Invaders
 |*| By Jitu Das & Bertha Lam
+|*| CMU 15-237 Cross-platform Mobile Web Apps, Fall 2012
 \*/
 
 var config = {
@@ -90,6 +91,7 @@ Game = (function () {
         this.fps = Util.default_arg(fps, 60);
         this.delay = 1000 / this.fps;
         this.interval = null;
+        this.lastUpdate = (new Date()).getTime();
 
         // Add event listeners
         var self = this;
@@ -172,6 +174,11 @@ Game = (function () {
     };
 
     Game.prototype.mainLoop = function () {
+        var prevUpdate = this.lastUpdate;
+        this.lastUpdate = (new Date()).getTime();
+        var dt = (this.lastUpdate - prevUpdate) / 1000;
+        this.curScreen.update(dt);
+        
         this.curScreen.render(this.ctx);
     };
 
@@ -201,6 +208,8 @@ Game = (function () {
 
 Screen = (function () {
     function Screen() {}
+
+    Screen.prototype.update = function (dt) { /* Do nothing */ };
 
     // clears the screen
     Screen.prototype.render = function(ctx) {
@@ -266,19 +275,17 @@ Stage = (function () {
 
     function Stage(platoons) {
         this.platoons = platoons;
-        this.lastUpdate = (new Date()).getTime();
     }
 
     Util.extend(Stage, Screen);
 
-    Stage.prototype.render = function(ctx) {
-        this._super.prototype.render(ctx);
-
-        var prevUpdate = this.lastUpdate;
-        this.lastUpdate = (new Date()).getTime();
-        var dt = (this.lastUpdate - prevUpdate) / 1000;
+    Stage.prototype.update = function (dt) {
         for (var i = 0; i < this.platoons.length; i++)
             this.platoons[i].update(dt);
+    };
+
+    Stage.prototype.render = function (ctx) {
+        this._super.prototype.render(ctx);
 
         renderBg(ctx);
         renderStats(ctx);
