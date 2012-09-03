@@ -43,6 +43,7 @@ Game = (function () {
         "click": "onClick",
         "mousedown": "onMouseDown",
         "mouseup": "onMouseUp",
+        "mousemove": "onMouseMove",
         "keydown": "onKeyDown",
         "keyup": "onKeyUp",
         "keypress": "onKeyPress"
@@ -60,12 +61,12 @@ Game = (function () {
         this.width = this.canvas.width;
         this.height = this.canvas.height;
 
-        this.curScreen = this.menu;
-
         // Compute update rate
         this.fps = Util.default_arg(config.fps, 60);
         this.delay = 1000 / this.fps;
         this.interval = null;
+
+        this.setScreen(this.menu);
 
         // Add event listeners
         var self = this;
@@ -108,6 +109,10 @@ Game = (function () {
         this.curScreen.render(this.ctx);
     };
 
+    Game.prototype.setScreen = function (screen) {
+        this.curScreen = screen;
+    }
+
     return Game;
 })();
 
@@ -119,6 +124,8 @@ Screen = (function () {
         ctx.fillStyle = game.bgColor;
         ctx.fillRect(0, 0, 600, 600);
     };
+
+    Screen.prototype.reset = function () { /* Do nothing */ };
 
     return Screen;
 })();
@@ -228,6 +235,29 @@ Object = (function () {
     };
 
     return Object;
+})();
+
+SpaceShip = (function () {
+    function SpaceShip() {
+    }
+
+    Util.extend(SpaceShip, Object);
+
+    return SpaceShip;
+})();
+
+Platoon = (function () {
+    function Platoon(startx, starty, config) {
+        this._super.prototype.constructor({
+        });
+    }
+
+    Util.extend(Platoon, Object);
+
+    Platoon.prototype.reset = function () {
+    };
+
+    return Platoon;
 })();
 
 Sprite = (function () {
