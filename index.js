@@ -5,6 +5,20 @@ var sprite_paths = {
     invader: "images/invader.png"
 };
 var stars;
+var stages_config = {
+    order: ["stage1", "stage2", "stage3"],
+    stage1: {
+        platoons: [
+            new Platoon(300, 300, 0, [
+                ['invader', 'invader', 'invader'],
+                ['invader', 'invader', 'invader', 'invader'],
+                ['invader', 'invader', 'invader'],
+            ])
+        ]
+    },
+    stage2: {
+    }
+};
 
 var Util = {
     extend: function (self, parent) {
@@ -181,7 +195,7 @@ Menu = (function () {
         // handle user input
        console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
         if (String.fromCharCode(e.charCode) === "s") {
-            game.setScreen("stage1");
+            game.setScreen(stages_config.order[0]);
         }
         else if (String.fromCharCode(e.charCode) === "i") {
             console.log("i");
@@ -207,8 +221,8 @@ Stage = (function () {
     // Player Status bar offset
     var statusBarOffset = 15;
 
-    function Stage(platoon) {
-        this.platoon = platoon;
+    function Stage(platoons) {
+        this.platoons = platoons;
         this.lastUpdate = (new Date()).getTime();
     }
     
@@ -220,13 +234,13 @@ Stage = (function () {
         var prevUpdate = this.lastUpdate;
         this.lastUpdate = (new Date()).getTime();
         var dt = (this.lastUpdate - prevUpdate) / 1000;
-        this.platoon.update(dt);
+        for (var i = 0; i < this.platoons.length; i++)
+            this.platoons[i].update(dt);
         
         renderBg(ctx);
         renderStats(ctx);
-        this.platoon.render(ctx);
-
-        console.log("render not implemented for Stage");
+        for (var i = 0; i < this.platoons.length; i++)
+            this.platoons[i].render(ctx);
     };
 
     // Renders background (stars)
@@ -286,11 +300,17 @@ Object = (function () {
 
     Object.prototype.render = function (ctx) {
         // TODO: This does useful stuff (common render code)
-        if (this.sprite)
-            ctx.drawImage(
-                this.sprite.image,
-                this.state.x - this.width / 2,
-                this.state.y - this.height / 2);
+        if (this.sprite) {
+            ctx.save();
+            
+            ctx.translate(this.state.x, this.state.y);
+            ctx.rotate(this.state.theta);
+            ctx.translate(-this.width / 2, -this.height / 2);
+            
+            ctx.drawImage(this.sprite.image, 0, 0);
+
+            ctx.restore();
+        }
     };
 
     Object.prototype.update = function (dt) {
@@ -305,8 +325,8 @@ Object = (function () {
 })();
 
 SpaceShip = (function () {
-    function SpaceShip(type) {
-        this._super.prototype.constructor.call(this, sprites[type]);
+    function SpaceShip(type, config) {
+        this._super.prototype.constructor.call(this, sprites[type], config);
     }
 
     Util.extend(SpaceShip, Object);
@@ -317,7 +337,7 @@ SpaceShip = (function () {
 Platoon = (function () {
     // How much space to put between the ships
     // (x,y) is the center of the platoon
-    function Platoon(x, y, theta, ships, spacing) {
+    function Platoon(x, y, theta, layout, spacing) {
         this.start = {
             x: x,
             y: y,
@@ -327,15 +347,15 @@ Platoon = (function () {
         this.spacing = Util.default_arg(spacing, 10);
 
         this.ships = [];
-        for (var i = 0; i < ships.length; i++) {
+        for (var i = 0; i < layout.length; i++) {
             var row = [];
-            for (var j = 0; j < ships[i].length; j++) {
-                row.push(new SpaceShip(ships[i][j]));
+            for (var j = 0; j < layout[i].length; j++) {
+                row.push(new SpaceShip(layout[i][j]));
             }
             this.ships.push(row);
         }
 
-        // Positions all the ships
+        this.computeOffsets();
         this.reset();
 
         this._super.prototype.constructor(null, {});
@@ -345,9 +365,6 @@ Platoon = (function () {
 
     Platoon.prototype.render = function (ctx) {
         ctx.save();
-
-        ctx.translate(this.state.x, this.state.y);
-        ctx.rotate(this.state.theta);
 
         // TODO: Override render to draw all the individual ships
         for (var i = 0; i < this.ships.length; i++) {
@@ -361,9 +378,20 @@ Platoon = (function () {
 
     Platoon.prototype.update = function (dt) {
         this._super.prototype.update.call(this, dt);
-        console.log(this.state.theta, this.state.vtheta);
 
-        // TODO: Update all the positions of the ships relative to the platoon
+        for (var i = 0; i < this.ships.length; i++) {
+            for (var j = 0; j < this.ships[i].length; j++) {
+                var ship = this.ships[i][j];
+                var state = ship.state;
+                
+                var ang = Math.atan2(state.offsety, state.offsetx);
+                var mag = Math.sqrt(state.offsetx * state.offsetx +
+                                    state.offsety * state.offsety);
+                state.x = this.state.x + mag * Math.cos(ang + this.state.theta);
+                state.y = this.state.y + mag * Math.sin(ang + this.state.theta);
+                state.theta = this.state.theta;
+            }
+        }
     };
 
     Platoon.prototype.reset = function () {
@@ -372,8 +400,10 @@ Platoon = (function () {
         this.state.theta = this.start.theta;
         this.state.vx = 0;
         this.state.vy = 0;
-        this.state.vtheta = Math.PI / 4;
+        this.state.vtheta = Math.PI / 8;
+    };
 
+    Platoon.prototype.computeOffsets = function () {
         this.totalHeight = 0;
         this.totalWidth = 0;
         this.rowHeights = [];
@@ -406,12 +436,8 @@ Platoon = (function () {
             for (var j = 0; j < this.ships[i].length; j++) {
                 var ship = this.ships[i][j];
                 var state = ship.state;
-                state.x = offsetX + ship.width / 2;
-                state.y = offsetY + ship.height / 2;
-                state.vx = 0;
-                state.vy = 0;
-                state.theta = 0;
-                state.vtheta = 0;
+                state.offsetx = offsetX + ship.width / 2;
+                state.offsety = offsetY + ship.height / 2;
                 offsetX += ship.width + this.spacing;
             }
             offsetY += this.rowHeights[i] + this.spacing;
@@ -457,7 +483,7 @@ function loadSprites(cb) {
 function startGame() {
     // Create and start the game
 
-    game = new Game("game");
+    game = new Game("game", 60);
 
     game.addScreen("menu", new Menu);
     game.addScreen("highscores", new HighScores());
@@ -465,17 +491,9 @@ function startGame() {
     stars = Util.generateStars();
 
     // TODO: Pass in the config for the stage
-
-    var platoon1 = new Platoon(300, 300, Math.PI/4, [
-        ['invader', 'invader', 'invader'],
-        ['invader', 'invader', 'invader', 'invader'],
-        ['invader', 'invader', 'invader'],
-    ]);
-    game.addScreen("stage1", new Stage(platoon1));
     
-    game.addScreen("stage2", new Stage());
-    
-    game.addScreen("stage3", new Stage());
+    for (var name in stages_config)
+        game.addScreen(name, new Stage(stages_config[name].platoons));
 
     game.start("menu");
 }
