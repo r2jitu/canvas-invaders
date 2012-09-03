@@ -4,6 +4,7 @@ var sprite_paths = {
     player: "images/player.png",
     invader: "images/invader.png"
 };
+var stars;
 
 var Util = {
     extend: function (self, parent) {
@@ -35,6 +36,24 @@ var Util = {
                 setTimeout(function () { sprites[p].load(finished); }, 0);
             })(p);
         }
+    },
+    generateStars: function() {
+        var numStars = 50;
+        var stars = new Array();
+
+        for (var i = 0; i < numStars; i++) {
+            var xPos = Math.floor(Math.random() * game.width);
+            var yPos = Math.floor(Math.random() * game.height + 15);
+            var alpha = Math.floor(Math.random() + 0.5); 
+
+            stars[i] = {
+                x: xPos,
+                y: yPos,
+                a: alpha
+            };
+        }
+
+        return stars;
     }
 };
 
@@ -182,9 +201,6 @@ HighScores = (function () {
 })();
 
 Stage = (function () {
-    // generate stars for stage
-    var stars = generateStars();
-
     function Stage() {}
     
     // Player Status bar offset
@@ -201,25 +217,7 @@ Stage = (function () {
         console.log("render not implemented for Stage");
     };
     
-    // Generate star pos & alpha val; called only on game init
-    function generateStars() {
-        var numStars = 50;
-        var stars = new Array();
-
-        for (var i = 0; i < numStars; i++) {
-            var xPos = Math.floor(Math.random() * game.width);
-            var yPos = Math.floor(Math.random() * game.height + 15);
-            var alpha = Math.floor(Math.random() + 0.5); 
-
-            stars[i] = {
-                x: xPos,
-                y: yPos,
-                a: alpha
-            };
-        }
-
-        return stars;
-    }
+    
 
     // Renders background (stars)
     function renderBg(ctx) {
@@ -421,6 +419,8 @@ function startGame() {
 
     game.addScreen("menu", new Menu);
     game.addScreen("highscores", new HighScores());
+
+    stars = Util.generateStars();
 
     // TODO: Pass in the config for the stage
 
