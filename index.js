@@ -140,14 +140,18 @@ Menu = (function () {
         ctx.fillText("Canvas Invaders", game.width / 2, 70);
 
         ctx.font = "bold 30px Arial";
-        ctx.fillText("Play (p)", game.width / 2, 270);
+        ctx.fillText("Start Game (s)", game.width / 2, 270);
         ctx.fillText("Instructions (i)", game.width / 2, 320);
-        
-        //game.stages[0].render(ctx);
     };
 
     Menu.prototype.onKeyPress = function(e) {
-        console.log("got press event", e);
+        // handle user input
+        if (String.fromCharCode(e.keyCode) === "s") {
+            game.curScreen = game.stages[0];
+        }
+        else if (String.fromCharCode(e.keyCode) === "i") {
+            console.log("i");
+        }
     };
 
     return Menu;
@@ -168,9 +172,20 @@ HighScores = (function () {
 Stage = (function () {
     function Stage() {}
     
+    // Player Status bar offset
+    /*
+    var statusOffset;
+    var 
+    */ 
+
     Util.extend(Stage, Screen);
 
     Stage.prototype.render = function(ctx) {
+        this._super.prototype.render(ctx);
+        
+        renderBg(ctx);
+        renderStats(ctx);
+
         console.log("render not implemented for Stage");
     };
     
@@ -180,6 +195,7 @@ Stage = (function () {
 
     // Renders user data (score, lives, weapon)
     function renderStats(ctx) {
+         
     }
 
     return Stage;
