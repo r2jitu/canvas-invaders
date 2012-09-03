@@ -1,25 +1,44 @@
-// The global game instance
-var game, sprites;
-var sprite_paths = {
-    player: "images/player.png",
-    invader: "images/invader.png"
-};
-var stars;
-var stages_config = {
-    order: ["stage1", "stage2", "stage3"],
-    stage1: {
-        platoons: [
-            new Platoon(300, 300, 0, [
-                ['invader', 'invader', 'invader'],
-                ['invader', 'invader', 'invader', 'invader'],
-                ['invader', 'invader', 'invader'],
-            ])
-        ]
+/*\
+|*| Canvas Invaders
+|*| By Jitu Das & Bertha Lam
+\*/
+
+var config = {
+    sprites: {
+        player: "images/player.png",
+        invader: "images/invader.png"
     },
-    stage2: {
-    }
+    stages: [
+        {
+            platoons: [
+                {
+                    x: 300,
+                    y: 200,
+                    theta: 0,
+                    layout: [
+                        ['invader', 'invader', 'invader'],
+                        ['invader', 'invader', 'invader', 'invader'],
+                        ['invader', 'invader', 'invader'],
+                    ]
+                },
+                {
+                    x: 300,
+                    y: 500,
+                    theta: 0,
+                    layout: [
+                        ['player'],
+                        ['player', 'player']
+                    ]
+                }
+            ]
+        }
+    ]
 };
 
+// The global game instance
+var game;
+
+// Miscellaneous helper functions
 var Util = {
     extend: function (self, parent) {
         self.prototype = new parent();
@@ -31,10 +50,91 @@ var Util = {
             return def;
         else
             return val;
-    },
-    load_sprites: function (paths, cb) {
+    }
+};
+
+/**************
+ * GAME LOGIC *
+ **************/
+
+Game = (function () {
+    var eventHandlers = {
+        "click": "onClick",
+        "mousedown": "onMouseDown",
+        "mouseup": "onMouseUp",
+        "mousemove": "onMouseMove",
+        "keydown": "onKeyDown",
+        "keyup": "onKeyUp",
+        "keypress": "onKeyPress"
+    };
+
+    function Game(canvas_id, fps) {
+        this.screens = {};
+        this.stages = [];
+        this.curStage = 0;
+
+        this.canvas = document.getElementById(canvas_id);
+        this.ctx = this.canvas.getContext("2d");
+
+        this.bgColor = "black";
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+
+        this.stars = generateStars(this.width, this.height);
+
+        // Player stats
+        this.playerScore = 0;
+        this.playerLives = 2;
+
+        // Compute update rate
+        this.fps = Util.default_arg(fps, 60);
+        this.delay = 1000 / this.fps;
+        this.interval = null;
+
+        // Add event listeners
+        var self = this;
+        for (var evname in eventHandlers) {
+            (function (evname) {
+                self.canvas.addEventListener(evname, function (e) {
+                    // Call the screen's handler if it has one
+                    var handler = eventHandlers[evname];
+                    if (typeof self.curScreen[handler] === "function") {
+                        self.curScreen[handler](e);
+                    }
+                });
+            })(evname);
+        }
+
+        this.canvas.setAttribute("tabindex", 0);
+        this.canvas.focus();
+    }
+    
+    function generateStars(width, height) {
+        var numStars = 50;
+        var stars = new Array();
+
+        for (var i = 0; i < numStars; i++) {
+            var xPos = Math.floor(Math.random() * width);
+            var yPos = Math.floor(Math.random() * height + 15);
+
+            var alpha = (Math.random() * 50 + 25) / 100;
+
+            stars[i] = {
+                x: xPos,
+                y: yPos,
+                a: alpha
+            };
+        }
+
+        return stars;
+    }
+
+    // Loads a list of sprites in parallel. Calls cb when all are done loading.
+    Game.prototype.loadSprites = function (paths, cb) {
         var sprites = {};
         var remain_sprites = 0;
+        
+        this.sprites = sprites;
 
         function finished() {
             remain_sprites--;
@@ -50,80 +150,6 @@ var Util = {
                 setTimeout(function () { sprites[p].load(finished); }, 0);
             })(p);
         }
-    },
-    generateStars: function() {
-        var numStars = 50;
-        var stars = new Array();
-
-        for (var i = 0; i < numStars; i++) {
-            var xPos = Math.floor(Math.random() * game.width);
-            var yPos = Math.floor(Math.random() * game.height + 15);
-
-            // TODO: Fix alpha
-            var alpha = ((Math.random() * 100 + 25) / 100.0) % 1; 
-
-            stars[i] = {
-                x: xPos,
-                y: yPos,
-                a: alpha
-            };
-        }
-
-        return stars;
-    }
-};
-
-Game = (function () {
-    var events = {
-        "click": "onClick",
-        "mousedown": "onMouseDown",
-        "mouseup": "onMouseUp",
-        "mousemove": "onMouseMove",
-        "keydown": "onKeyDown",
-        "keyup": "onKeyUp",
-        "keypress": "onKeyPress"
-    };
-
-    function Game(canvas_id, fps) {
-        this.screens = {};
-
-        this.canvas = document.getElementById(canvas_id);
-        this.ctx = this.canvas.getContext("2d");
-
-        this.bgColor = "black";
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
-
-        // Player stats
-        this.playerScore = 0;
-        this.playerLives = 2;
-
-        // Compute update rate
-        this.fps = Util.default_arg(fps, 60);
-        this.delay = 1000 / this.fps;
-        this.interval = null;
-
-        // Add event listeners
-        var self = this;
-        for (var evname in events) {
-            (function (evname) {
-                self.canvas.addEventListener(evname, function (e) {
-                    // Call the screen's handler if it has one
-                    var handler = events[evname];
-                    console.log(evname, e);
-                    if (typeof self.curScreen[handler] === "function") {
-                        self.curScreen[handler](e);
-                    }
-                });
-            })(evname);
-        }
-
-        this.canvas.setAttribute("tabindex", 0);
-        this.canvas.focus();
-    }
-
-    Game.prototype.addScreen = function (name, screen) {
-        this.screens[name] = screen;
     };
 
     Game.prototype.start = function (screen_id) {
@@ -139,7 +165,7 @@ Game = (function () {
 
     Game.prototype.resume = function () {
         var self = this;
-        
+
         this.interval = setInterval(function() {
             self.mainLoop();
         }, this.delay);
@@ -149,9 +175,26 @@ Game = (function () {
         this.curScreen.render(this.ctx);
     };
 
+    Game.prototype.addScreen = function (name, screen) {
+        this.screens[name] = screen;
+    };
+
+    Game.prototype.addStage = function (stage) {
+        var idx = this.stages.length + 1;
+        var name = "stage" + idx;
+        this.stages.push(name);
+        this.addScreen(name, stage);
+    };
+
     Game.prototype.setScreen = function (screen_id) {
         this.curScreen = this.screens[screen_id];
-    }
+        this.curStage = null;
+    };
+
+    Game.prototype.setStage = function (idx) {
+        this.setScreen(this.stages[idx]);
+        this.curStage = idx;
+    };
 
     return Game;
 })();
@@ -174,7 +217,7 @@ Menu = (function () {
     function Menu() {}
 
     Util.extend(Menu, Screen);
-    
+
     // press S to start, P to pause, I for instructions
 
     Menu.prototype.render = function(ctx) {
@@ -195,7 +238,7 @@ Menu = (function () {
         // handle user input
        console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
         if (String.fromCharCode(e.charCode) === "s") {
-            game.setScreen(stages_config.order[0]);
+            game.setStage(0);
         }
         else if (String.fromCharCode(e.charCode) === "i") {
             console.log("i");
@@ -209,11 +252,11 @@ HighScores = (function () {
     function HighScores() {}
 
     Util.extend(HighScores, Screen);
-    
+
     HighScores.prototype.render = function(ctx) {
       console.log("render not implemented for HighScores");
     };
-    
+
     return HighScores;
 })();
 
@@ -225,7 +268,7 @@ Stage = (function () {
         this.platoons = platoons;
         this.lastUpdate = (new Date()).getTime();
     }
-    
+
     Util.extend(Stage, Screen);
 
     Stage.prototype.render = function(ctx) {
@@ -236,7 +279,7 @@ Stage = (function () {
         var dt = (this.lastUpdate - prevUpdate) / 1000;
         for (var i = 0; i < this.platoons.length; i++)
             this.platoons[i].update(dt);
-        
+
         renderBg(ctx);
         renderStats(ctx);
         for (var i = 0; i < this.platoons.length; i++)
@@ -245,8 +288,8 @@ Stage = (function () {
 
     // Renders background (stars)
     function renderBg(ctx) {
-        for (var i = 0; i < stars.length; i++) {
-            var star = stars[i];
+        for (var i = 0; i < game.stars.length; i++) {
+            var star = game.stars[i];
             ctx.fillStyle = "rgba(255, 255, 255," +  star.a + ")";
             ctx.fillRect(star.x, star.y, 5, 5);
         }
@@ -263,7 +306,7 @@ Stage = (function () {
 
         // Score
         ctx.fillText("Score:", 10, 15);
-        
+
         var scoreOffset = 10 + 5 + ctx.measureText("Score:").width;
         ctx.fillText(game.playerScore, scoreOffset, 15);
 
@@ -276,6 +319,10 @@ Stage = (function () {
 
     return Stage;
 })();
+
+/****************
+ * OBJECT LOGIC *
+ ****************/
 
 Object = (function () {
     function Object(sprite, config) {
@@ -299,16 +346,11 @@ Object = (function () {
     }
 
     Object.prototype.render = function (ctx) {
-        // TODO: This does useful stuff (common render code)
         if (this.sprite) {
             ctx.save();
-            
             ctx.translate(this.state.x, this.state.y);
             ctx.rotate(this.state.theta);
-            ctx.translate(-this.width / 2, -this.height / 2);
-            
-            ctx.drawImage(this.sprite.image, 0, 0);
-
+            ctx.drawImage(this.sprite.image, -this.width/2, -this.height/2);
             ctx.restore();
         }
     };
@@ -326,7 +368,7 @@ Object = (function () {
 
 SpaceShip = (function () {
     function SpaceShip(type, config) {
-        this._super.prototype.constructor.call(this, sprites[type], config);
+        this._super(game.sprites[type], config);
     }
 
     Util.extend(SpaceShip, Object);
@@ -343,7 +385,8 @@ Platoon = (function () {
             y: y,
             theta: theta
         };
-
+        this._super(null, this.start);
+        
         this.spacing = Util.default_arg(spacing, 10);
 
         this.ships = [];
@@ -357,23 +400,17 @@ Platoon = (function () {
 
         this.computeOffsets();
         this.reset();
-
-        this._super.prototype.constructor(null, {});
     }
 
     Util.extend(Platoon, Object);
 
     Platoon.prototype.render = function (ctx) {
-        ctx.save();
-
         // TODO: Override render to draw all the individual ships
         for (var i = 0; i < this.ships.length; i++) {
             for (var j = 0; j < this.ships[i].length; j++) {
                 this.ships[i][j].render(ctx);
             }
         }
-
-        ctx.restore();
     };
 
     Platoon.prototype.update = function (dt) {
@@ -383,7 +420,7 @@ Platoon = (function () {
             for (var j = 0; j < this.ships[i].length; j++) {
                 var ship = this.ships[i][j];
                 var state = ship.state;
-                
+
                 var ang = Math.atan2(state.offsety, state.offsetx);
                 var mag = Math.sqrt(state.offsetx * state.offsetx +
                                     state.offsety * state.offsety);
@@ -457,7 +494,7 @@ Sprite = (function () {
     Sprite.prototype.load = function (cb) {
         var self = this;
         console.log("Loading image " + self.src);
-        
+
         this.image = new Image();
         this.image.onload = function () {
             if (!self.width) self.width = this.width;
@@ -472,35 +509,27 @@ Sprite = (function () {
     return Sprite;
 })();
 
-// Load the sprites then call the callback when they're all loaded
-function loadSprites(cb) {
-    Util.load_sprites(sprite_paths, function (sprites) {
-        window.sprites = sprites;
-        cb();
-    });
-}
-
-function startGame() {
-    // Create and start the game
-
-    game = new Game("game", 60);
-
-    game.addScreen("menu", new Menu);
-    game.addScreen("highscores", new HighScores());
-
-    stars = Util.generateStars();
-
-    // TODO: Pass in the config for the stage
-    
-    for (var name in stages_config)
-        game.addScreen(name, new Stage(stages_config[name].platoons));
-
-    game.start("menu");
-}
+/*********
+ * SETUP *
+ *********/
 
 function init() {
-    loadSprites(function () {
-        startGame()
+    game = new Game("game", 60);
+
+    game.loadSprites(config.sprites, function () {
+        game.addScreen("menu", new Menu());
+        game.addScreen("highscores", new HighScores());
+
+        config.stages.forEach(function (config) {
+            var platoons = [];
+            config.platoons.forEach(function (config) {
+                platoons.push(new Platoon(config.x, config.y, config.theta,
+                    config.layout));
+            });
+            game.addStage(new Stage(platoons));
+        });
+
+        game.start("menu");
     });
 }
 
