@@ -5,6 +5,7 @@
 \*/
 
 var config = {
+    canvas: "game",
     sprites: {
         player: "images/player.png",
         invader: "images/invader.png"
@@ -513,14 +514,11 @@ Sprite = (function () {
 
     Sprite.prototype.load = function (cb) {
         var self = this;
-        console.log("Loading image " + self.src);
-
         this.image = new Image();
         this.image.onload = function () {
             if (!self.width) self.width = this.width;
             if (!self.height) self.height = this.height;
             console.log("Loaded image " + self.src, self.width, self.height);
-
             cb();
         };
         this.image.src = this.src;
@@ -534,7 +532,7 @@ Sprite = (function () {
  *********/
 
 function init() {
-    game = new Game("game", 60);
+    game = new Game(config.canvas, 60);
 
     game.loadSprites(config.sprites, function () {
         game.player = new PlayerShip();
