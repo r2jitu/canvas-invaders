@@ -44,7 +44,9 @@ var Util = {
         for (var i = 0; i < numStars; i++) {
             var xPos = Math.floor(Math.random() * game.width);
             var yPos = Math.floor(Math.random() * game.height + 15);
-            var alpha = Math.floor(Math.random() + 0.5); 
+
+            // TODO: Fix alpha
+            var alpha = ((Math.random() * 100 + 25) / 100.0) % 1; 
 
             stars[i] = {
                 x: xPos,
@@ -177,10 +179,11 @@ Menu = (function () {
 
     Menu.prototype.onKeyPress = function(e) {
         // handle user input
-        if (String.fromCharCode(e.keyCode) === "s") {
-            game.curScreen = game.stages[0];
+       console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
+        if (String.fromCharCode(e.charCode) === "s") {
+            game.setScreen("stage1");
         }
-        else if (String.fromCharCode(e.keyCode) === "i") {
+        else if (String.fromCharCode(e.charCode) === "i") {
             console.log("i");
         }
     };
@@ -221,8 +224,11 @@ Stage = (function () {
 
     // Renders background (stars)
     function renderBg(ctx) {
-       // ctx.fillStyle = rgba(255, 255, 255, "white";
-       // ctx.fillRect(1, 1, 100, 100);
+        for (var i = 0; i < stars.length; i++) {
+            var star = stars[i];
+            ctx.fillStyle = "rgba(255, 255, 255," +  star.a + ")";
+            ctx.fillRect(star.x, star.y, 5, 5);
+        }
     }
 
     // Renders user data (score, lives, weapon)
