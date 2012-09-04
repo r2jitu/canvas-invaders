@@ -1,15 +1,45 @@
-/**
- *  Jitu Das (cdas)
- *  Bertha Lam (chingwal)
- */
-// The global game instance
-var game, sprites;
-var sprite_paths = {
-    player: "images/player.png",
-    invader: "images/invader.png"
-};
-var stars;
+/*\
+|*| Canvas Invaders
+|*| By Jitu Das & Bertha Lam
+|*| CMU 15-237 Cross-platform Mobile Web Apps, Fall 2012
+\*/
 
+var config = {
+    sprites: {
+        player: "images/player.png",
+        invader: "images/invader.png"
+    },
+    stages: [
+        {
+            platoons: [
+                {
+                    x: 300,
+                    y: 200,
+                    theta: 0,
+                    layout: [
+                        ['invader', 'invader', 'invader'],
+                        ['invader', 'invader', 'invader', 'invader'],
+                        ['invader', 'invader', 'invader'],
+                    ]
+                },
+                {
+                    x: 300,
+                    y: 500,
+                    theta: 0,
+                    layout: [
+                        ['player'],
+                        ['player', 'player']
+                    ]
+                }
+            ]
+        }
+    ]
+};
+
+// The global game instance
+var game;
+
+// Miscellaneous helper functions
 var Util = {
     extend: function (self, parent) {
         self.prototype = new parent();
@@ -21,10 +51,92 @@ var Util = {
             return def;
         else
             return val;
-    },
-    load_sprites: function (paths, cb) {
+    }
+};
+
+/**************
+ * GAME LOGIC *
+ **************/
+
+Game = (function () {
+    var eventHandlers = {
+        "click": "onClick",
+        "mousedown": "onMouseDown",
+        "mouseup": "onMouseUp",
+        "mousemove": "onMouseMove",
+        "keydown": "onKeyDown",
+        "keyup": "onKeyUp",
+        "keypress": "onKeyPress"
+    };
+
+    function Game(canvas_id, fps) {
+        this.screens = {};
+        this.stages = [];
+        this.curStage = 0;
+
+        this.canvas = document.getElementById(canvas_id);
+        this.ctx = this.canvas.getContext("2d");
+
+        this.bgColor = "black";
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+
+        this.stars = generateStars(this.width, this.height);
+
+        // Player stats
+        this.playerScore = 0;
+        this.player = null;
+
+        // Compute update rate
+        this.fps = Util.default_arg(fps, 60);
+        this.delay = 1000 / this.fps;
+        this.interval = null;
+        this.lastUpdate = (new Date()).getTime();
+
+        // Add event listeners
+        var self = this;
+        for (var evname in eventHandlers) {
+            (function (evname) {
+                self.canvas.addEventListener(evname, function (e) {
+                    // Call the screen's handler if it has one
+                    var handler = eventHandlers[evname];
+                    if (typeof self.curScreen[handler] === "function") {
+                        self.curScreen[handler](e);
+                    }
+                });
+            })(evname);
+        }
+
+        this.canvas.setAttribute("tabindex", 0);
+        this.canvas.focus();
+    }
+    
+    function generateStars(width, height) {
+        var numStars = 50;
+        var stars = new Array();
+
+        for (var i = 0; i < numStars; i++) {
+            var xPos = Math.floor(Math.random() * width);
+            var yPos = Math.floor(Math.random() * height + 15);
+
+            var alpha = (Math.random() * 50 + 25) / 100;
+
+            stars[i] = {
+                x: xPos,
+                y: yPos,
+                a: alpha
+            };
+        }
+
+        return stars;
+    }
+
+    // Loads a list of sprites in parallel. Calls cb when all are done loading.
+    Game.prototype.loadSprites = function (paths, cb) {
         var sprites = {};
         var remain_sprites = 0;
+        
+        this.sprites = sprites;
 
         function finished() {
             remain_sprites--;
@@ -40,80 +152,6 @@ var Util = {
                 setTimeout(function () { sprites[p].load(finished); }, 0);
             })(p);
         }
-    },
-    generateStars: function() {
-        var numStars = 50;
-        var stars = new Array();
-
-        for (var i = 0; i < numStars; i++) {
-            var xPos = Math.floor(Math.random() * game.width);
-            var yPos = Math.floor(Math.random() * game.height + 15);
-
-            // TODO: Fix alpha
-            var alpha = ((Math.random() * 100 + 25) / 100.0) % 1; 
-
-            stars[i] = {
-                x: xPos,
-                y: yPos,
-                a: alpha
-            };
-        }
-
-        return stars;
-    }
-};
-
-Game = (function () {
-    var events = {
-        "click": "onClick",
-        "mousedown": "onMouseDown",
-        "mouseup": "onMouseUp",
-        "mousemove": "onMouseMove",
-        "keydown": "onKeyDown",
-        "keyup": "onKeyUp",
-        "keypress": "onKeyPress"
-    };
-
-    function Game(canvas_id, fps) {
-        this.screens = {};
-
-        this.canvas = document.getElementById(canvas_id);
-        this.ctx = this.canvas.getContext("2d");
-
-        this.bgColor = "black";
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
-
-        // Player stats
-        this.playerScore = 0;
-        this.player = null;
-
-        // Compute update rate
-        this.fps = Util.default_arg(fps, 60);
-        this.delay = 1000 / this.fps;
-        this.interval = null;
-
-        // Add event listeners
-        var self = this;
-        for (var evname in events) {
-            (function (evname) {
-                self.canvas.addEventListener(evname, function (e) {
-                    // Call the screen's handler if it has one
-                    var handler = events[evname];
-                    console.log(evname, e);
-                    if (typeof self.curScreen[handler] === "function") {
-                        self.curScreen[handler](e);
-                    }
-                });
-            })(evname);
-        }
-
-        this.canvas.setAttribute("tabindex", 0);
-        this.canvas.focus();
-    }
-
-    Game.prototype.addScreen = function (name, screen) {
-        this.screens[name] = screen;
     };
 
     Game.prototype.start = function (screen_id) {
@@ -129,25 +167,49 @@ Game = (function () {
 
     Game.prototype.resume = function () {
         var self = this;
-        
+
         this.interval = setInterval(function() {
             self.mainLoop();
         }, this.delay);
     };
 
     Game.prototype.mainLoop = function () {
+        var prevUpdate = this.lastUpdate;
+        this.lastUpdate = (new Date()).getTime();
+        var dt = (this.lastUpdate - prevUpdate) / 1000;
+        this.curScreen.update(dt);
+        
         this.curScreen.render(this.ctx);
+    };
+
+    Game.prototype.addScreen = function (name, screen) {
+        this.screens[name] = screen;
+    };
+
+    Game.prototype.addStage = function (stage) {
+        var idx = this.stages.length + 1;
+        var name = "stage" + idx;
+        this.stages.push(name);
+        this.addScreen(name, stage);
     };
 
     Game.prototype.setScreen = function (screen_id) {
         this.curScreen = this.screens[screen_id];
-    }
+        this.curStage = null;
+    };
+
+    Game.prototype.setStage = function (idx) {
+        this.setScreen(this.stages[idx]);
+        this.curStage = idx;
+    };
 
     return Game;
 })();
 
 Screen = (function () {
     function Screen() {}
+
+    Screen.prototype.update = function (dt) { /* Do nothing */ };
 
     // clears the screen
     Screen.prototype.render = function(ctx) {
@@ -164,7 +226,7 @@ Menu = (function () {
     function Menu() {}
 
     Util.extend(Menu, Screen);
-    
+
     // press S to start, P to pause, I for instructions
 
     Menu.prototype.render = function(ctx) {
@@ -185,7 +247,7 @@ Menu = (function () {
         // handle user input
        console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
         if (String.fromCharCode(e.charCode) === "s") {
-            game.setScreen("stage1");
+            game.setStage(0);
         }
         else if (String.fromCharCode(e.charCode) === "i") {
             console.log("i");
@@ -199,11 +261,11 @@ HighScores = (function () {
     function HighScores() {}
 
     Util.extend(HighScores, Screen);
-    
+
     HighScores.prototype.render = function(ctx) {
       console.log("render not implemented for HighScores");
     };
-    
+
     return HighScores;
 })();
 
@@ -211,32 +273,30 @@ Stage = (function () {
     // Player Status bar offset
     var statusBarOffset = 15;
 
-    function Stage(platoon) {
-        this.platoon = platoon;
-        this.lastUpdate = (new Date()).getTime();
+    function Stage(platoons) {
+        this.platoons = platoons;
     }
-    
+
     Util.extend(Stage, Screen);
 
-    Stage.prototype.render = function(ctx) {
+    Stage.prototype.update = function (dt) {
+        for (var i = 0; i < this.platoons.length; i++)
+            this.platoons[i].update(dt);
+    };
+
+    Stage.prototype.render = function (ctx) {
         this._super.prototype.render(ctx);
 
-        var prevUpdate = this.lastUpdate;
-        this.lastUpdate = (new Date()).getTime();
-        var dt = (this.lastUpdate - prevUpdate) / 1000;
-        this.platoon.update(dt);
-        
         renderBg(ctx);
         renderStats(ctx);
-        this.platoon.render(ctx);
-
-        console.log("render not implemented for Stage");
+        for (var i = 0; i < this.platoons.length; i++)
+            this.platoons[i].render(ctx);
     };
 
     // Renders background (stars)
     function renderBg(ctx) {
-        for (var i = 0; i < stars.length; i++) {
-            var star = stars[i];
+        for (var i = 0; i < game.stars.length; i++) {
+            var star = game.stars[i];
             ctx.fillStyle = "rgba(255, 255, 255," +  star.a + ")";
             ctx.fillRect(star.x, star.y, 5, 5);
         }
@@ -253,7 +313,7 @@ Stage = (function () {
 
         // Score
         ctx.fillText("Score:", 10, 15);
-        
+
         var scoreOffset = 10 + 5 + ctx.measureText("Score:").width;
         ctx.fillText(game.playerScore, scoreOffset, 15);
 
@@ -266,6 +326,10 @@ Stage = (function () {
 
     return Stage;
 })();
+
+/****************
+ * OBJECT LOGIC *
+ ****************/
 
 Object = (function () {
     function Object(sprite, config) {
@@ -289,12 +353,13 @@ Object = (function () {
     }
 
     Object.prototype.render = function (ctx) {
-        // TODO: This does useful stuff (common render code)
-        if (this.sprite)
-            ctx.drawImage(
-                this.sprite.image,
-                this.state.x - this.width / 2,
-                this.state.y - this.height / 2);
+        if (this.sprite) {
+            ctx.save();
+            ctx.translate(this.state.x, this.state.y);
+            ctx.rotate(this.state.theta);
+            ctx.drawImage(this.sprite.image, -this.width/2, -this.height/2);
+            ctx.restore();
+        }
     };
 
     Object.prototype.update = function (dt) {
@@ -309,8 +374,9 @@ Object = (function () {
 })();
 
 SpaceShip = (function () {
-    function SpaceShip(type) {
-        this._super.prototype.constructor.call(this, sprites[type]);
+    function SpaceShip(type, config) {
+        if (typeof type === "string")
+            this._super(game.sprites[type], config);
     }
 
     Util.extend(SpaceShip, Object);
@@ -320,7 +386,7 @@ SpaceShip = (function () {
 
 PlayerShip = (function () {
     function PlayerShip() {
-        this._super.prototype.constructor.call("player");
+        this._super("player");
         
         this.health = 100;
     }
@@ -333,53 +399,56 @@ PlayerShip = (function () {
 Platoon = (function () {
     // How much space to put between the ships
     // (x,y) is the center of the platoon
-    function Platoon(x, y, theta, ships, spacing) {
+    function Platoon(x, y, theta, layout, spacing) {
         this.start = {
             x: x,
             y: y,
             theta: theta
         };
-
+        this._super(null, this.start);
+        
         this.spacing = Util.default_arg(spacing, 10);
 
         this.ships = [];
-        for (var i = 0; i < ships.length; i++) {
+        for (var i = 0; i < layout.length; i++) {
             var row = [];
-            for (var j = 0; j < ships[i].length; j++) {
-                row.push(new SpaceShip(ships[i][j]));
+            for (var j = 0; j < layout[i].length; j++) {
+                row.push(new SpaceShip(layout[i][j]));
             }
             this.ships.push(row);
         }
 
-        // Positions all the ships
+        this.computeOffsets();
         this.reset();
-
-        this._super.prototype.constructor(null, {});
     }
 
     Util.extend(Platoon, Object);
 
     Platoon.prototype.render = function (ctx) {
-        ctx.save();
-
-        ctx.translate(this.state.x, this.state.y);
-        ctx.rotate(this.state.theta);
-
         // TODO: Override render to draw all the individual ships
         for (var i = 0; i < this.ships.length; i++) {
             for (var j = 0; j < this.ships[i].length; j++) {
                 this.ships[i][j].render(ctx);
             }
         }
-
-        ctx.restore();
     };
 
     Platoon.prototype.update = function (dt) {
         this._super.prototype.update.call(this, dt);
-        console.log(this.state.theta, this.state.vtheta);
 
-        // TODO: Update all the positions of the ships relative to the platoon
+        for (var i = 0; i < this.ships.length; i++) {
+            for (var j = 0; j < this.ships[i].length; j++) {
+                var ship = this.ships[i][j];
+                var state = ship.state;
+
+                var ang = Math.atan2(state.offsety, state.offsetx);
+                var mag = Math.sqrt(state.offsetx * state.offsetx +
+                                    state.offsety * state.offsety);
+                state.x = this.state.x + mag * Math.cos(ang + this.state.theta);
+                state.y = this.state.y + mag * Math.sin(ang + this.state.theta);
+                state.theta = this.state.theta;
+            }
+        }
     };
 
     Platoon.prototype.reset = function () {
@@ -388,8 +457,10 @@ Platoon = (function () {
         this.state.theta = this.start.theta;
         this.state.vx = 0;
         this.state.vy = 0;
-        this.state.vtheta = Math.PI / 4;
+        this.state.vtheta = Math.PI / 8;
+    };
 
+    Platoon.prototype.computeOffsets = function () {
         this.totalHeight = 0;
         this.totalWidth = 0;
         this.rowHeights = [];
@@ -422,12 +493,8 @@ Platoon = (function () {
             for (var j = 0; j < this.ships[i].length; j++) {
                 var ship = this.ships[i][j];
                 var state = ship.state;
-                state.x = offsetX + ship.width / 2;
-                state.y = offsetY + ship.height / 2;
-                state.vx = 0;
-                state.vy = 0;
-                state.theta = 0;
-                state.vtheta = 0;
+                state.offsetx = offsetX + ship.width / 2;
+                state.offsety = offsetY + ship.height / 2;
                 offsetX += ship.width + this.spacing;
             }
             offsetY += this.rowHeights[i] + this.spacing;
@@ -447,7 +514,7 @@ Sprite = (function () {
     Sprite.prototype.load = function (cb) {
         var self = this;
         console.log("Loading image " + self.src);
-        
+
         this.image = new Image();
         this.image.onload = function () {
             if (!self.width) self.width = this.width;
@@ -462,44 +529,29 @@ Sprite = (function () {
     return Sprite;
 })();
 
-// Load the sprites then call the callback when they're all loaded
-function loadSprites(cb) {
-    Util.load_sprites(sprite_paths, function (sprites) {
-        window.sprites = sprites;
-        cb();
-    });
-}
-
-function startGame() {
-    // Create and start the game
-
-    game = new Game("game");
-
-    game.addScreen("menu", new Menu);
-    game.addScreen("highscores", new HighScores());
-
-    stars = Util.generateStars();
-
-    // TODO: Pass in the config for the stage
-    game.player = new PlayerShip();
-
-    var platoon1 = new Platoon(300, 300, Math.PI/4, [
-        ['invader', 'invader', 'invader'],
-        ['invader', 'invader', 'invader', 'invader'],
-        ['invader', 'invader', 'invader'],
-    ]);
-    game.addScreen("stage1", new Stage(platoon1));
-    
-    game.addScreen("stage2", new Stage());
-    
-    game.addScreen("stage3", new Stage());
-
-    game.start("menu");
-}
+/*********
+ * SETUP *
+ *********/
 
 function init() {
-    loadSprites(function () {
-        startGame()
+    game = new Game("game", 60);
+
+    game.loadSprites(config.sprites, function () {
+        game.player = new PlayerShip();
+
+        game.addScreen("menu", new Menu());
+        game.addScreen("highscores", new HighScores());
+
+        config.stages.forEach(function (config) {
+            var platoons = [];
+            config.platoons.forEach(function (config) {
+                platoons.push(new Platoon(config.x, config.y, config.theta,
+                    config.layout));
+            });
+            game.addStage(new Stage(platoons));
+        });
+
+        game.start("menu");
     });
 }
 
