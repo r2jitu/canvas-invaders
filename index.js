@@ -12,6 +12,7 @@ var config = {
     stages: [
         {
             platoons: [
+                /*
                 {
                     x: 300,
                     y: 200,
@@ -31,9 +32,12 @@ var config = {
                         ['player', 'player']
                     ]
                 }
+                */
             ]
         }
-    ]
+    ],
+    player_velocity: 75,
+    player_angvelocity: 2 * Math.PI / 3
 };
 
 // The global game instance
@@ -44,7 +48,7 @@ var Util = {
     extend: function (self, parent) {
         self.prototype = new parent();
         self.prototype.constructor = self;
-        self.prototype._super = parent;
+        self.parent = parent;
     },
     default_arg: function (val, def) {
         if (typeof val === "undefined")
@@ -230,7 +234,7 @@ Menu = (function () {
     // press S to start, P to pause, I for instructions
 
     Menu.prototype.render = function(ctx) {
-        this._super.prototype.render(ctx);
+        Menu.parent.prototype.render(ctx);
 
         ctx.fillStyle = "white";
         ctx.font = "bold 40px Arial";
@@ -248,13 +252,52 @@ Menu = (function () {
        console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
         if (String.fromCharCode(e.charCode) === "s") {
             game.setStage(0);
+            game.player.reset();
         }
         else if (String.fromCharCode(e.charCode) === "i") {
-            console.log("i");
+            game.setScreen("instructions");
         }
     };
 
     return Menu;
+})();
+
+Instructions = (function () {
+    function Instructions() {}
+
+    Util.extend(Instructions, Screen);
+
+    Instructions.prototype.render = function(ctx) {
+        Instructions.parent.prototype.render(ctx);
+        // render header
+        ctx.fillStyle = "white";
+        ctx.font = "bold 40px Arial";
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        ctx.fillText("Instructions", game.width / 2, 70);
+
+        // render actual instructions
+        ctx.font = "25px Arial";
+        ctx.fillText("Up Arrow - Move forward", game.width / 2, 200);
+        ctx.fillText("Down Arrow - Move backwards", game.width / 2, 230);
+        ctx.fillText("Left Arrow - Rotate counter-clockwise", game.width / 2, 260);
+        ctx.fillText("Right Arrow - Rotate clockwise", game.width / 2, 290);
+        ctx.fillText("Spacebar - Fire weapon", game.width / 2, 320);
+
+        ctx.fillText("Press 'b' to return to the menu screen", game.width / 2, 550);
+
+    }
+
+    // Handle user keyboard input
+    Instructions.prototype.onKeyPress = function(e) {
+        // 'b', escape, backspace will go back to menu
+        if (String.fromCharCode(e.charCode) === "b") {
+           game.setScreen("menu"); 
+        }
+    }
+    
+    return Instructions;
+
 })();
 
 HighScores = (function () {
@@ -272,6 +315,7 @@ HighScores = (function () {
 Stage = (function () {
     // Player Status bar offset
     var statusBarOffset = 15;
+    var pressedKeys = {};
 
     function Stage(platoons) {
         this.platoons = platoons;
@@ -282,15 +326,22 @@ Stage = (function () {
     Stage.prototype.update = function (dt) {
         for (var i = 0; i < this.platoons.length; i++)
             this.platoons[i].update(dt);
+
+        game.player.update(dt);
     };
 
     Stage.prototype.render = function (ctx) {
-        this._super.prototype.render(ctx);
+        Stage.parent.prototype.render(ctx);
 
         renderBg(ctx);
         renderStats(ctx);
+
+        // render platoons
         for (var i = 0; i < this.platoons.length; i++)
             this.platoons[i].render(ctx);
+
+        // render player
+        game.player.render(ctx);
     };
 
     // Renders background (stars)
@@ -324,6 +375,48 @@ Stage = (function () {
         ctx.fillText(game.player.health, livesOffset, 15);
     }
 
+    
+    Stage.prototype.onKeyDown = function (e) {
+        console.log(e.keyCode);
+        if (!pressedKeys[e.keyCode]) {
+            switch (e.keyCode) {
+            case 37: // left arrow
+                game.player.state.vtheta -= config.player_angvelocity;
+                break;
+            case 39: // right arrow
+                game.player.state.vtheta += config.player_angvelocity;
+                break;
+            case 38: // up arrow
+                game.player.state.vforward += config.player_velocity;
+                break;
+            case 40: // down arrow
+                game.player.state.vforward -= config.player_velocity;
+                break;
+            }
+        }
+
+        pressedKeys[e.keyCode] = true;
+    };
+
+    Stage.prototype.onKeyUp = function (e) {
+        switch (e.keyCode) {
+        case 37: // left arrow
+            game.player.state.vtheta += config.player_angvelocity;
+            break;
+        case 39: // right arrow
+            game.player.state.vtheta -= config.player_angvelocity;
+            break;
+        case 38: // up arrow
+            game.player.state.vforward -= config.player_velocity;
+            break;
+        case 40: // down arrow
+            game.player.state.vforward += config.player_velocity;
+            break;
+        }
+
+        pressedKeys[e.keyCode] = false;
+    };
+
     return Stage;
 })();
 
@@ -356,7 +449,7 @@ Object = (function () {
         if (this.sprite) {
             ctx.save();
             ctx.translate(this.state.x, this.state.y);
-            ctx.rotate(this.state.theta);
+            ctx.rotate(this.state.theta + Math.PI / 2);
             ctx.drawImage(this.sprite.image, -this.width/2, -this.height/2);
             ctx.restore();
         }
@@ -366,17 +459,23 @@ Object = (function () {
         this.state.x += dt * this.state.vx;
         this.state.y += dt * this.state.vy;
         this.state.theta += dt * this.state.vtheta;
-
+        if (this.state.vforward) {
+            this.state.x += dt * this.state.vforward * Math.cos(this.state.theta);
+            this.state.y += dt * this.state.vforward * Math.sin(this.state.theta);
+        }
         // TODO: Collision detection
     };
+
+    Object.prototype.reset = function () {};    // do nothing
 
     return Object;
 })();
 
 SpaceShip = (function () {
     function SpaceShip(type, config) {
-        if (typeof type === "string")
-            this._super(game.sprites[type], config);
+        if (typeof type === "string") {
+            SpaceShip.parent.call(this, game.sprites[type], config);
+        }
     }
 
     Util.extend(SpaceShip, Object);
@@ -386,12 +485,19 @@ SpaceShip = (function () {
 
 PlayerShip = (function () {
     function PlayerShip() {
-        this._super("player");
-        
+        PlayerShip.parent.call(this, "player");
         this.health = 100;
     }
 
     Util.extend(PlayerShip, SpaceShip);
+
+    PlayerShip.prototype.reset = function () {
+        this.state.x = 300;
+        this.state.y = 300;
+        this.state.vforward = 0;
+        this.state.theta = 0;
+        this.state.vtheta = 0;
+    };
 
     return PlayerShip;
 })();
@@ -405,7 +511,7 @@ Platoon = (function () {
             y: y,
             theta: theta
         };
-        this._super(null, this.start);
+        Platoon.parent.call(this, null, this.start);
         
         this.spacing = Util.default_arg(spacing, 10);
 
@@ -434,8 +540,9 @@ Platoon = (function () {
     };
 
     Platoon.prototype.update = function (dt) {
-        this._super.prototype.update.call(this, dt);
+        Platoon.parent.prototype.update(dt);
 
+        // update position of each ship in platoon
         for (var i = 0; i < this.ships.length; i++) {
             for (var j = 0; j < this.ships[i].length; j++) {
                 var ship = this.ships[i][j];
@@ -540,6 +647,7 @@ function init() {
         game.player = new PlayerShip();
 
         game.addScreen("menu", new Menu());
+        game.addScreen("instructions", new Instructions());
         game.addScreen("highscores", new HighScores());
 
         config.stages.forEach(function (config) {
