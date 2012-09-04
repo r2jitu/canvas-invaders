@@ -12,10 +12,9 @@ var config = {
     stages: [
         {
             platoons: [
-                /*
                 {
                     x: 300,
-                    y: 200,
+                    y: 100,
                     theta: 0,
                     layout: [
                         ['invader', 'invader', 'invader'],
@@ -23,6 +22,7 @@ var config = {
                         ['invader', 'invader', 'invader'],
                     ]
                 },
+                /*
                 {
                     x: 300,
                     y: 500,
@@ -234,7 +234,7 @@ Menu = (function () {
     // press S to start, P to pause, I for instructions
 
     Menu.prototype.render = function(ctx) {
-        Menu.parent.prototype.render(ctx);
+        Menu.parent.prototype.render.call(this, ctx);
 
         ctx.fillStyle = "white";
         ctx.font = "bold 40px Arial";
@@ -268,7 +268,7 @@ Instructions = (function () {
     Util.extend(Instructions, Screen);
 
     Instructions.prototype.render = function(ctx) {
-        Instructions.parent.prototype.render(ctx);
+        Instructions.parent.prototype.render.call(this, ctx);
         // render header
         ctx.fillStyle = "white";
         ctx.font = "bold 40px Arial";
@@ -331,7 +331,7 @@ Stage = (function () {
     };
 
     Stage.prototype.render = function (ctx) {
-        Stage.parent.prototype.render(ctx);
+        Stage.parent.prototype.render.call(this, ctx);
 
         renderBg(ctx);
         renderStats(ctx);
@@ -387,10 +387,10 @@ Stage = (function () {
                 game.player.state.vtheta += config.player_angvelocity;
                 break;
             case 38: // up arrow
-                game.player.state.vforward += config.player_velocity;
+                game.player.state.vel += config.player_velocity;
                 break;
             case 40: // down arrow
-                game.player.state.vforward -= config.player_velocity;
+                game.player.state.vel -= config.player_velocity;
                 break;
             }
         }
@@ -407,10 +407,10 @@ Stage = (function () {
             game.player.state.vtheta -= config.player_angvelocity;
             break;
         case 38: // up arrow
-            game.player.state.vforward -= config.player_velocity;
+            game.player.state.vel -= config.player_velocity;
             break;
         case 40: // down arrow
-            game.player.state.vforward += config.player_velocity;
+            game.player.state.vel += config.player_velocity;
             break;
         }
 
@@ -431,9 +431,8 @@ Object = (function () {
         this.state = {
             x: Util.default_arg(config.x, 0),
             y: Util.default_arg(config.y, 0),
+            vel: Util.default_arg(config.vel, 0),
             theta: Util.default_arg(config.theta, 0),
-            vx: Util.default_arg(config.vx, 0),
-            vy: Util.default_arg(config.vy, 0),
             vtheta: Util.default_arg(config.vtheta, 0)
         };
 
@@ -449,20 +448,17 @@ Object = (function () {
         if (this.sprite) {
             ctx.save();
             ctx.translate(this.state.x, this.state.y);
-            ctx.rotate(this.state.theta + Math.PI / 2);
+            ctx.rotate(this.state.theta);
             ctx.drawImage(this.sprite.image, -this.width/2, -this.height/2);
             ctx.restore();
         }
     };
 
     Object.prototype.update = function (dt) {
-        this.state.x += dt * this.state.vx;
-        this.state.y += dt * this.state.vy;
+        this.state.x += dt * this.state.vel * Math.sin(this.state.theta);
+        this.state.y -= dt * this.state.vel * Math.cos(this.state.theta);
         this.state.theta += dt * this.state.vtheta;
-        if (this.state.vforward) {
-            this.state.x += dt * this.state.vforward * Math.cos(this.state.theta);
-            this.state.y += dt * this.state.vforward * Math.sin(this.state.theta);
-        }
+        
         // TODO: Collision detection
     };
 
@@ -494,7 +490,7 @@ PlayerShip = (function () {
     PlayerShip.prototype.reset = function () {
         this.state.x = 300;
         this.state.y = 300;
-        this.state.vforward = 0;
+        this.state.vel = 0;
         this.state.theta = 0;
         this.state.vtheta = 0;
     };
@@ -540,7 +536,7 @@ Platoon = (function () {
     };
 
     Platoon.prototype.update = function (dt) {
-        Platoon.parent.prototype.update(dt);
+        Platoon.parent.prototype.update.call(this, dt);
 
         // update position of each ship in platoon
         for (var i = 0; i < this.ships.length; i++) {
@@ -561,9 +557,8 @@ Platoon = (function () {
     Platoon.prototype.reset = function () {
         this.state.x = this.start.x;
         this.state.y = this.start.y;
+        this.state.vel = 0;
         this.state.theta = this.start.theta;
-        this.state.vx = 0;
-        this.state.vy = 0;
         this.state.vtheta = Math.PI / 8;
     };
 
