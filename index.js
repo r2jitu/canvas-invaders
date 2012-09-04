@@ -1,3 +1,7 @@
+/**
+ *  Jitu Das (cdas)
+ *  Bertha Lam (chingwal)
+ */
 // The global game instance
 var game, sprites;
 var sprite_paths = {
