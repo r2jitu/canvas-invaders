@@ -36,7 +36,7 @@ var config = {
         }
     ],
     player_velocity: 150,
-    player_angvelocity: 2 * Math.PI / 2,
+    player_angvelocity: 2 * Math.PI / 1.5,
     shooting_delay: 250, // milliseconds
     bullet_velocity: 200,
 };
@@ -178,9 +178,12 @@ Game = (function () {
         var prevUpdate = this.lastUpdate;
         this.lastUpdate = (new Date()).getTime();
         var dt = (this.lastUpdate - prevUpdate) / 1000;
-        this.curScreen.update(dt);
         
-        this.curScreen.render(this.ctx);
+        var doRender = this.curScreen.update(dt);
+        
+        if (doRender) {
+            this.curScreen.render(this.ctx);
+        }
     };
 
     Game.prototype.addScreen = function (name, screen) {
@@ -223,9 +226,17 @@ Game = (function () {
 })();
 
 Screen = (function () {
-    function Screen() {}
+    function Screen() { /* Do nothing */ }
 
-    Screen.prototype.update = function (dt) { /* Do nothing */ };
+    Screen.prototype.update = function (dt) {
+        if (this.wasRendered) {
+            // By default don't redraw except first frame
+            return false;
+        } else {
+            this.wasRendered = true;
+            return true;
+        }
+    };
 
     // clears the screen
     Screen.prototype.render = function(ctx) {
@@ -233,7 +244,9 @@ Screen = (function () {
         ctx.fillRect(0, 0, 600, 600);
     };
 
-    Screen.prototype.reset = function () { /* Do nothing */ };
+    Screen.prototype.reset = function () {
+        this.wasRendered = false;
+    };
 
     return Screen;
 })();
@@ -418,19 +431,22 @@ Stage = (function () {
     };
 
     Stage.prototype.update = function (dt) {
-        // update platoons
+        // Update platoons
         for (var i = 0; i < this.platoons.length; i++)
             this.platoons[i].update(dt);
 
-        // update player
+        // Update player
         game.player.update(dt);
 
-        // update bullets
+        // Update bullets
         for (var i = 0; i < game.bullets.length; i++) 
             game.bullets[i].update(dt);
 
-        // do collision detection
+        // Do collision detection
         this.detectCollisions();
+
+        // We always want to redraw
+        return true;
     };
 
     Stage.prototype.render = function (ctx) {
@@ -439,14 +455,14 @@ Stage = (function () {
         renderBg(ctx);
         renderStats(ctx);
 
-        // render platoons
+        // Render platoons
         for (var i = 0; i < this.platoons.length; i++)
             this.platoons[i].render(ctx);
 
-        // render player
+        // Render player
         game.player.render(ctx);
 
-        // render bullets
+        // Render bullets
         for (var i = 0; i < game.bullets.length; i++)
             game.bullets[i].render(ctx);
     };
@@ -563,8 +579,7 @@ Object = (function () {
         if (this.sprite) {
             this.width = this.sprite.width;
             this.height = this.sprite.height;
-            this.radius = Math.sqrt((this.width / 2) * (this.width / 2)
-                                    + (this.height / 2) * (this.height / 2));
+            this.radius = Math.min(this.width, this.height) / 2;
         }
     }
 
@@ -863,6 +878,17 @@ Platoon = (function () {
         }
 
         return null;
+    };
+
+    Platoon.prototype.remainingShips = function () {
+        var count = 0;
+        for (var i = 0; i < this.ships.length; i++) {
+            for (var j = 0; j < this.ships[i].length; j++) {
+                if (this.ships[i][j].health > 0)
+                    count++;
+            }
+        }
+        return count;
     };
 
     return Platoon;
