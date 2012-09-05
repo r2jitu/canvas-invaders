@@ -539,13 +539,13 @@ Object = (function () {
     Object.prototype.reset = function () {};    // do nothing
 
     Object.prototype.collidesWith = function (that) {
-        if (!this.radiusSq || !that.radiusSq) return false;
+        if (!this.radius || !that.radius) return false;
 
         var dx = this.state.x - that.state.x;
         var dy = this.state.y - that.state.y;
         var distSq = dx * dx + dy * dy;
 
-        return (distSq > (this.radius+that.radius) * (this.radius+that.radius));
+        return (distSq < (this.radius+that.radius) * (this.radius+that.radius));
     };
 
     return Object;
