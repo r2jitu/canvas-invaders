@@ -104,10 +104,10 @@ var game_config = {
         }
     ],
     player_velocity: 150,
-    player_angvelocity: 2 * Math.PI / 1.5,
+    player_angvelocity: 2 * Math.PI / 2,
     platoon_velocity: 20,
     platoon_angvelocity: 2 * Math.PI / 20,
-    platoon_shooting_chance: 0.0025,
+    platoon_shooting_chance: 0.01,
     shooting_delay: 300, // milliseconds
     bullet_velocity: 200,
 };
@@ -163,6 +163,7 @@ Game = (function () {
         this.playerScore = 0;
         this.player = null;
         this.bullets = [];
+        this.explosions = [];
 
         // Compute update rate
         this.fps = Util.default_arg(fps, 60);
@@ -179,8 +180,16 @@ Game = (function () {
                         && typeof this.curScreen[handler] === "function") {
                     this.curScreen[handler](e);
                 }
+
+                if (evname === "keydown") {
+                    this.pressedKeys[e.keyCode] = true;
+                } else if (evname === "keyup") {
+                    this.pressedKeys[e.keyCode] = false;
+                }
             }.bind(this, evname));
         }
+
+        this.pressedKeys = {};
 
         this.canvas.setAttribute("tabindex", 0);
         this.canvas.focus();
@@ -291,6 +300,7 @@ Game = (function () {
 
     Game.prototype.reset = function () {
         this.bullets = [];
+        this.explosions = [];
         this.player.reset();
     };
 
@@ -471,6 +481,11 @@ Stage = (function () {
             if (ship) {
                 player.health = Math.max(0, player.health-25);
                 ship.health = 0;
+
+                game.explosions.push(new Explosion(
+                    (player.state.x + ship.state.x) / 2,
+                    (player.state.y + ship.state.y) / 2
+                ));
             }
         }
 
@@ -488,6 +503,10 @@ Stage = (function () {
                     ship.health = 0;
                     game.bullets.splice(i, 1);
                     i--;
+                    game.explosions.push(new Explosion(
+                        bullet.state.x,
+                        bullet.state.y
+                    ));
                     continue;
                 }
             } else if (player.health > 0) {
@@ -496,6 +515,10 @@ Stage = (function () {
                     player.health -= 5;
                     game.bullets.splice(i, 1);
                     i--;
+                    game.explosions.push(new Explosion(
+                        bullet.state.x,
+                        bullet.state.y
+                    ));
                 }
             }
 
@@ -522,11 +545,19 @@ Stage = (function () {
         for (var i = 0; i < game.bullets.length; i++) 
             game.bullets[i].update(dt);
 
+        // Update explosions
+        for (var i = 0; i < game.explosions.length; i++) {
+            game.explosions[i].update(dt);
+            if (game.explosions[i].stage > 1) {
+                game.explosions.splice(i, 1);
+                i--;
+            }
+        }
+
         // Do collision detection
         this.detectCollisions();
 
         // Show game over if health reaches 0
-        console.log(game.player.health);
         if (game.player.health === 0) {
             //game.nextStage();
             game.setScreen("lose");
@@ -566,6 +597,10 @@ Stage = (function () {
         // Render bullets
         for (var i = 0; i < game.bullets.length; i++)
             game.bullets[i].render(ctx);
+
+        // Render explosions
+        for (var i = 0; i < game.explosions.length; i++)
+            game.explosions[i].render(ctx);
     };
 
     // Renders background (stars)
@@ -601,7 +636,7 @@ Stage = (function () {
 
     
     Stage.prototype.onKeyDown = function (e) {
-        if (!this.pressedKeys[e.keyCode]) {
+        if (!game.pressedKeys[e.keyCode]) {
             switch (e.keyCode) {
             case 37: // left arrow
                 game.player.state.vtheta += game_config.player_angvelocity;
@@ -620,8 +655,6 @@ Stage = (function () {
                 break;
             }
         }
-
-        this.pressedKeys[e.keyCode] = true;
     };
 
     Stage.prototype.onKeyUp = function (e) {
@@ -642,8 +675,6 @@ Stage = (function () {
             game.player.setShooting(false);
             break;
         }
-
-        this.pressedKeys[e.keyCode] = false;
     };
 
     Stage.prototype.reset = function () {
@@ -652,10 +683,6 @@ Stage = (function () {
         for (var i = 0; i < this.platoons.length; i++) {
             this.platoons[i].reset();
         }
-
-        console.log("RESET STAGE");
-        this.pressedKeys = {};
-        this.lastFrameImage = null;
     };
 
     return Stage;
@@ -1037,6 +1064,34 @@ Platoon = (function () {
     };
 
     return Platoon;
+})();
+
+Explosion = (function () {
+    function Explosion(x, y) {
+        Explosion.parent.constructor.call(this, "", {x:x, y:y});
+        this.stage = 0;
+    }
+
+    Util.extend(Explosion, Object);
+
+    Explosion.prototype.update = function (dt) {
+        this.stage += dt * 4;
+    };
+
+    Explosion.prototype.render = function (ctx) {
+        var alpha = 1 - this.stage / 2;
+        if (alpha < 0) return;
+
+        var radius = this.stage * 10;
+
+        ctx.beginPath();
+        ctx.arc(this.state.x, this.state.y, radius, 0, 2*Math.PI, true);
+        ctx.strokeStyle = "rgba(255,255,255," + alpha + ")";
+        ctx.lineWidth = 5;
+        ctx.stroke();
+    };
+
+    return Explosion;
 })();
 
 Sprite = (function () {
