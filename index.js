@@ -15,8 +15,8 @@ var game_config = {
         {
             platoons: [
                 {
-                    x: 0.5,
-                    y: 0.0,
+                    x: 300,
+                    y: -20,
                     theta: -Math.PI / 2,
                     layout: [
                         ['invader', 'invader', 'invader', 'invader', 'invader'],
@@ -27,16 +27,16 @@ var game_config = {
         {
             platoons: [
                 {
-                    x: 0.0,
-                    y: 0.5,
+                    x: -50,
+                    y: 300,
                     theta: 0,
                     layout: [
                         ['invader', 'invader', 'invader']
                     ]
                 },
                 {
-                    x: 1.0,
-                    y: 0.5,
+                    x: 650,
+                    y: 300,
                     theta: 0,
                     layout: [
                         ['invader', 'invader', 'invader']
@@ -47,32 +47,32 @@ var game_config = {
         {
             platoons: [
                 {
-                    x: 0.0,
-                    y: 0.0,
+                    x: -50,
+                    y: -20,
                     theta: -Math.PI / 4,
                     layout: [
                         ['invader', 'invader', 'invader']
                     ]
                 },
                 {
-                    x: 1.0,
-                    y: 0.0,
+                    x: 650,
+                    y: -20,
                     theta: -3 * Math.PI / 4,
                     layout: [
                         ['invader', 'invader', 'invader']
                     ]
                 },
                 {
-                    x: 0.0,
-                    y: 1.0,
+                    x: -50,
+                    y: 650,
                     theta: Math.PI / 4,
                     layout: [
                         ['invader', 'invader', 'invader']
                     ]
                 },
                 {
-                    x: 1.0,
-                    y: 1.0,
+                    x: 650,
+                    y: 650,
                     theta: 3 * Math.PI / 4,
                     layout: [
                         ['invader', 'invader', 'invader']
@@ -83,8 +83,8 @@ var game_config = {
         {
             platoons: [
                 {
-                    x: 0.5,
-                    y: 0.0,
+                    x: 300,
+                    y: -20,
                     theta: -Math.PI / 2,
                     layout: [
                         ['invader', 'invader', 'invader'],
@@ -92,8 +92,8 @@ var game_config = {
                     ]
                 },
                 {
-                    x: 0.5,
-                    y: 1.0,
+                    x: 300,
+                    y: 650,
                     theta: Math.PI / 2,
                     layout: [
                         ['invader', 'invader', 'invader'],
@@ -110,6 +110,7 @@ var game_config = {
     platoon_shooting_chance: 0.01,
     shooting_delay: 300, // milliseconds
     bullet_velocity: 200,
+    header_height: 30
 };
 
 // The global game instance
@@ -260,11 +261,12 @@ Game = (function () {
         this.lastUpdate = (new Date()).getTime();
         var dt = (this.lastUpdate - prevUpdate) / 1000;
         
-        var doRender = this.curScreen.update(dt);
-        
-        if (doRender) {
-            this.curScreen.render(this.ctx, dt);
-        }
+        // Get this variable since update may change screen
+        var curScreen = this.curScreen;
+
+        // Only render if the update functions says we need to redraw
+        var doRender = curScreen.update(dt);
+        if (doRender) curScreen.render(this.ctx, dt);
     };
 
     Game.prototype.addScreen = function (name, screen) {
@@ -447,8 +449,8 @@ Stage = (function () {
         // Player collision with wall
         if (player.state.x < player.radius)
             player.state.x = player.radius;
-        if (player.state.y < player.radius)
-            player.state.y = player.radius;
+        if (player.state.y < player.radius+game_config.header_height)
+            player.state.y = player.radius+game_config.header_height;
         if (player.state.x > game.width-player.radius)
             player.state.x = game.width-player.radius;
         if (player.state.y > game.height-player.radius)
@@ -524,7 +526,7 @@ Stage = (function () {
 
             // Remove out of bound bullet
             if (bullet.state.x < -bullet.radius
-                    || bullet.state.y < -bullet.radius
+                    || bullet.state.y < -bullet.radius+game_config.header_height
                     || bullet.state.x > game.width+bullet.radius
                     || bullet.state.y > game.height+bullet.radius) {
                 game.bullets.splice(i, 1);
@@ -561,7 +563,7 @@ Stage = (function () {
         if (game.player.health === 0) {
             //game.nextStage();
             game.setScreen("lose");
-            return false;
+            return true;
         }
 
         // Check if all enemies have been destroyed
@@ -585,7 +587,6 @@ Stage = (function () {
         ctx.fillRect(0, 0, game.width, game.height);
 
         renderBg(ctx);
-        renderStats(ctx);
 
         // Render platoons
         for (var i = 0; i < this.platoons.length; i++)
@@ -601,6 +602,8 @@ Stage = (function () {
         // Render explosions
         for (var i = 0; i < game.explosions.length; i++)
             game.explosions[i].render(ctx);
+        
+        renderStats(ctx);
     };
 
     // Renders background (stars)
@@ -614,12 +617,14 @@ Stage = (function () {
 
     // Renders user data (score, lives, weapon)
     function renderStats(ctx) {
+        // TODO: render black box for stats
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, game.width, game_config.header_height);
+
         ctx.fillStyle = "white";
         ctx.font = "bold 15px Arial";
         ctx.textBaseline = "middle";
         ctx.textAlign = "left";
-
-        // TODO: render black box for stats
 
         // Score
         ctx.fillText("Score:", 10, 15);
@@ -960,11 +965,15 @@ Platoon = (function () {
                                             player.state.x, player.state.y);
                     state.theta = vecToPlayer.theta;
 
-                    // Some percent chance of firing again after a delay
-                    var curTime = (new Date()).getTime();
-                    if (curTime-ship.lastShot > game_config.shooting_delay
-                            && Math.random() < game_config.platoon_shooting_chance) {
-                        ship.fireBullet(curTime);
+                    // Check if the ship is visible
+                    if (state.x > 0 && state.y > game_config.header_height
+                            && state.x < game.width && state.y < game.height) {
+                        // Some percent chance of firing again after a delay
+                        var curTime = (new Date()).getTime();
+                        if (curTime-ship.lastShot > game_config.shooting_delay
+                                && Math.random() < game_config.platoon_shooting_chance) {
+                            ship.fireBullet(curTime);
+                        }
                     }
                 }
             }
@@ -1136,8 +1145,8 @@ function init() {
             stage_config.platoons.forEach(function (platoon_config) {
                 platoons.push(
                     new Platoon(
-                        game.width * platoon_config.x,
-                        game.height * platoon_config.y,
+                        platoon_config.x,
+                        platoon_config.y,
                         platoon_config.theta,
                         platoon_config.layout
                     )
