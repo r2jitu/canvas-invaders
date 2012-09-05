@@ -26,7 +26,7 @@ var config = {
                 {
                     x: 300,
                     y: 500,
-                    theta: 0,
+                    theta: Math.PI / 2,
                     layout: [
                         ['invader', 'invader', 'invader'],
                         ['invader', 'invader', 'invader', 'invader'],
@@ -35,9 +35,10 @@ var config = {
             ]
         }
     ],
-    player_velocity: 75,
-    player_angvelocity: 2 * Math.PI / 3,
-    shooting_delay: 250 // milliseconds
+    player_velocity: 150,
+    player_angvelocity: 2 * Math.PI / 2,
+    shooting_delay: 250, // milliseconds
+    bullet_velocity: 200,
 };
 
 // The global game instance
@@ -99,17 +100,14 @@ Game = (function () {
         this.lastUpdate = (new Date()).getTime();
 
         // Add event listeners
-        var self = this;
         for (var evname in eventHandlers) {
-            (function (evname) {
-                self.canvas.addEventListener(evname, function (e) {
-                    // Call the screen's handler if it has one
-                    var handler = eventHandlers[evname];
-                    if (typeof self.curScreen[handler] === "function") {
-                        self.curScreen[handler](e);
-                    }
-                });
-            })(evname);
+            this.canvas.addEventListener(evname, function (evname, e) {
+                // Call the screen's handler if it has one
+                var handler = eventHandlers[evname];
+                if (typeof this.curScreen[handler] === "function") {
+                    this.curScreen[handler](e);
+                }
+            }.bind(this, evname));
         }
 
         this.canvas.setAttribute("tabindex", 0);
@@ -171,11 +169,9 @@ Game = (function () {
     };
 
     Game.prototype.resume = function () {
-        var self = this;
-
         this.interval = setInterval(function() {
-            self.mainLoop();
-        }, this.delay);
+            this.mainLoop();
+        }.bind(this), this.delay);
     };
 
     Game.prototype.mainLoop = function () {
@@ -200,12 +196,27 @@ Game = (function () {
 
     Game.prototype.setScreen = function (screen_id) {
         this.curScreen = this.screens[screen_id];
+        this.curScreen.reset();
         this.curStage = null;
     };
 
     Game.prototype.setStage = function (idx) {
         this.setScreen(this.stages[idx]);
         this.curStage = idx;
+    };
+
+    Game.prototype.nextStage = function () {
+        this.curStage++;
+        if (this.curStage < this.stages.length) {
+            this.setStage(this.curStage);
+        } else {
+            this.setScreen("menu");
+        }
+    };
+
+    Game.prototype.reset = function () {
+        this.bullets = [];
+        this.player.reset();
     };
 
     return Game;
@@ -252,8 +263,8 @@ Menu = (function () {
         // handle user input
         //console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
         if (String.fromCharCode(e.charCode) === "s") {
+            game.reset();
             game.setStage(0);
-            game.player.reset();
         }
         else if (String.fromCharCode(e.charCode) === "i") {
             game.setScreen("instructions");
@@ -302,7 +313,9 @@ Instructions = (function () {
 })();
 
 HighScores = (function () {
-    function HighScores() {}
+    function HighScores() {
+        HighScores.parent.prototype.constructor.call(this);
+    }
 
     Util.extend(HighScores, Screen);
 
@@ -319,6 +332,8 @@ Stage = (function () {
     var pressedKeys = {};
 
     function Stage(platoons) {
+        Stage.parent.prototype.constructor.call(this);
+
         this.platoons = platoons;
     }
 
@@ -337,31 +352,57 @@ Stage = (function () {
         if (player.state.y > game.height-player.radius)
             player.state.y = game.height-player.radius;
 
-        // Platoon with platoon
+        for (var i = 0; i < this.platoons.length; i++) {
+            var platoon = this.platoons[i];
+
+            // Platoon with platoon
+            for (var j = i+1; j < this.platoons.length; j++) {
+                var platoon2 = this.platoons[j];
+                var dx = platoon2.state.x - platoon.state.x;
+                var dy = platoon2.state.y - platoon.state.y;
+                var dist = Math.sqrt(dx*dx + dy*dy);
+                var delta = platoon.radius + platoon2.radius - dist;
+                if (delta > 0) {
+                    // normalize
+                    var nx = dx / dist;
+                    var ny = dy / dist;
+
+                    platoon.state.x -= nx * delta / 2;
+                    platoon.state.y -= ny * delta / 2;
+                    platoon2.state.x += nx * delta / 2;
+                    platoon2.state.y += ny * delta / 2;
+                }
+            }
+
+            // Platoon with player
+            var ship = platoon.collidesWith(player);
+            if (ship) {
+                player.health = 0;
+            }
+        }
 
         for (var i = 0; i < game.bullets.length; i++) {
             var bullet = game.bullets[i];
-            
-            // Bullet with platoon
-            var ship = null;
-            for (var j = 0; j < this.platoons.length && !ship; j++) {
-                var platoon = this.platoons[j];
-                ship = platoon.collidesWith(bullet);
-                if (ship) {
-                    console.log("COLLISION", platoon, ship, bullet);
-                }
-            }
-            if (ship) {
-                ship.health = 0;
-                game.bullets.splice(i, 1);
-                i--;
-                continue;
-            }
 
-            // Bullet with player
-            if (bullet.origin !== player) {
+            if (bullet.origin === player) {
+                // Bullet with platoon
+                var ship = null;
+                for (var j = 0; j < this.platoons.length && !ship; j++) {
+                    var platoon = this.platoons[j];
+                    ship = platoon.collidesWith(bullet);
+                }
+                if (ship) {
+                    ship.health = 0;
+                    game.bullets.splice(i, 1);
+                    i--;
+                    continue;
+                }
+            } else if (player.health > 0) {
+                // Bullet with player
                 if (bullet.collidesWith(player)) {
-                    console.log("TODO: Player got hit");
+                    player.health -= 5;
+                    game.bullets.splice(i, 1);
+                    i--;
                 }
             }
 
@@ -488,6 +529,14 @@ Stage = (function () {
         pressedKeys[e.keyCode] = false;
     };
 
+    Stage.prototype.reset = function () {
+        Stage.parent.prototype.reset.call(this);
+
+        for (var i = 0; i < this.platoons.length; i++) {
+            this.platoons[i].reset();
+        }
+    };
+
     return Stage;
 })();
 
@@ -514,9 +563,8 @@ Object = (function () {
         if (this.sprite) {
             this.width = this.sprite.width;
             this.height = this.sprite.height;
-            this.radiusSq = (this.width / 2) * (this.width / 2)
-                          + (this.height / 2) * (this.height / 2);
-            this.radius = Math.sqrt(this.radiusSq);
+            this.radius = Math.sqrt((this.width / 2) * (this.width / 2)
+                                    + (this.height / 2) * (this.height / 2));
         }
     }
 
@@ -536,7 +584,7 @@ Object = (function () {
         this.state.theta += dt * this.state.vtheta;
     };
 
-    Object.prototype.reset = function () {};    // do nothing
+    Object.prototype.reset = function () { /* Do nothing */ };
 
     Object.prototype.collidesWith = function (that) {
         if (!this.radius || !that.radius) return false;
@@ -571,15 +619,41 @@ Bullet = (function () {
 SpaceShip = (function () {
     function SpaceShip(type, config) {
         SpaceShip.parent.apply(this, arguments);
-        this.health = 100;
+        
+        this.fullHealth = 100;
+        this.lastShot = 0;
+
+        this.reset();
     }
 
     Util.extend(SpaceShip, Object);
+
+    SpaceShip.prototype.update = function () {
+        if (this.health > 0) {
+            SpaceShip.parent.prototype.update.apply(this, arguments);
+        }
+    };
 
     SpaceShip.prototype.render = function () {
         if (this.health > 0) {
             SpaceShip.parent.prototype.render.apply(this, arguments);
         }
+    };
+
+    SpaceShip.prototype.fireBullet = function (curTime) {
+        var bullet = new Bullet(this, this.state.x, this.state.y, 
+            config.bullet_velocity, this.state.theta);
+        
+        game.bullets.push(bullet);
+        
+        if (!curTime) curTime = (new Date()).getTime();
+        this.lastShot = curTime;
+    };
+
+    SpaceShip.prototype.reset = function () {
+        SpaceShip.parent.prototype.reset.call(this);
+
+        this.health = this.fullHealth;
     };
 
     return SpaceShip;
@@ -588,8 +662,8 @@ SpaceShip = (function () {
 PlayerShip = (function () {
     function PlayerShip() {
         PlayerShip.parent.call(this, "player");
+        
         this.isShooting = false;
-        this.lastShot = 0;
     }
 
     Util.extend(PlayerShip, SpaceShip);
@@ -598,18 +672,14 @@ PlayerShip = (function () {
         PlayerShip.parent.prototype.update.call(this, dt);
 
         var curTime = (new Date()).getTime();
-
         if (this.isShooting && curTime-this.lastShot > config.shooting_delay) {
-            var bullet = new Bullet(this, this.state.x, this.state.y, 
-                150, this.state.theta);
-
-            game.bullets.push(bullet);
-
-            this.lastShot = curTime;
+            this.fireBullet(curTime);
         }
     };
 
     PlayerShip.prototype.reset = function () {
+        PlayerShip.parent.prototype.reset.call(this);
+
         this.state.x = 300;
         this.state.y = 300;
         this.state.vel = 0;
@@ -647,13 +717,11 @@ Platoon = (function () {
         }
 
         this.computeOffsets();
-        this.reset();
     }
 
     Util.extend(Platoon, Object);
 
     Platoon.prototype.render = function (ctx) {
-        // TODO: Override render to draw all the individual ships
         for (var i = 0; i < this.ships.length; i++) {
             for (var j = 0; j < this.ships[i].length; j++) {
                 this.ships[i][j].render(ctx);
@@ -681,8 +749,10 @@ Platoon = (function () {
             this.state.vtheta = 0;
         }
 
-        if (dist > this.height / 2) {
+        if (dist > this.height / 2 + 2 * game.player.radius) {
             this.state.vel = 10;
+        } else if (dist < this.height / 2 + game.player.radius) {
+            this.state.vel = -10;
         } else {
             this.state.vel = 0;
         }
@@ -695,22 +765,40 @@ Platoon = (function () {
                 var ship = this.ships[i][j];
                 var state = ship.state;
 
-                var ang = Math.atan2(state.offsety, state.offsetx) + Math.PI / 2;
-                var mag = Math.sqrt(state.offsetx * state.offsetx +
-                                    state.offsety * state.offsety);
-                state.x = this.state.x + mag * Math.cos(ang + this.state.theta);
-                state.y = this.state.y - mag * Math.sin(ang + this.state.theta);
-                state.theta = this.state.theta;
+                if (ship.health > 0) {
+                    var ang = Math.atan2(state.offsety, state.offsetx) + Math.PI / 2;
+                    var mag = Math.sqrt(state.offsetx * state.offsetx +
+                                        state.offsety * state.offsety);
+                    state.x = this.state.x + mag * Math.cos(ang + this.state.theta);
+                    state.y = this.state.y - mag * Math.sin(ang + this.state.theta);
+                    state.theta = angToPlayer;
+
+                    // Some percent chance of firing again after a delay
+                    var curTime = (new Date()).getTime();
+                    if (curTime-ship.lastShot > config.shooting_delay
+                            && Math.random() < 0.0025) {
+                        ship.fireBullet(curTime);
+                    }
+                }
             }
         }
     };
 
     Platoon.prototype.reset = function () {
+        Platoon.parent.prototype.reset.call(this);
+
         this.state.x = this.start.x;
         this.state.y = this.start.y;
         this.state.vel = 0;
         this.state.theta = this.start.theta;
         this.state.vtheta = 0;
+
+        // Reset all the ships
+        for (var i = 0; i < this.ships.length; i++) {
+            for (var j = 0; j < this.ships[i].length; j++) {
+                this.ships[i][j].reset();
+            }
+        }
     };
 
     Platoon.prototype.computeOffsets = function () {
@@ -754,9 +842,8 @@ Platoon = (function () {
         }
         
         // Compute radius for collision detection
-        this.radiusSq = (this.width / 2) * (this.width / 2)
-                      + (this.height / 2) * (this.height / 2);
-        this.radius = Math.sqrt(this.radiusSq);
+        this.radius = Math.sqrt((this.width / 2) * (this.width / 2)
+                                + (this.height / 2) * (this.height / 2));
     };
 
     Platoon.prototype.collidesWith = function (that) {
