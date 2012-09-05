@@ -250,7 +250,7 @@ Menu = (function () {
 
     Menu.prototype.onKeyPress = function(e) {
         // handle user input
-       console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
+        //console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
         if (String.fromCharCode(e.charCode) === "s") {
             game.setStage(0);
             game.player.reset();
@@ -324,6 +324,58 @@ Stage = (function () {
 
     Util.extend(Stage, Screen);
 
+    Stage.prototype.detectCollisions = function () {
+        var player = game.player;
+
+        // Player collision with wall
+        if (player.state.x < player.radius)
+            player.state.x = player.radius;
+        if (player.state.y < player.radius)
+            player.state.y = player.radius;
+        if (player.state.x > game.width-player.radius)
+            player.state.x = game.width-player.radius;
+        if (player.state.y > game.height-player.radius)
+            player.state.y = game.height-player.radius;
+
+        // Platoon with platoon
+
+        for (var i = 0; i < game.bullets.length; i++) {
+            var bullet = game.bullets[i];
+            
+            // Bullet with platoon
+            var ship = null;
+            for (var j = 0; j < this.platoons.length && !ship; j++) {
+                var platoon = this.platoons[j];
+                ship = platoon.collidesWith(bullet);
+                if (ship) {
+                    console.log("COLLISION", platoon, ship, bullet);
+                }
+            }
+            if (ship) {
+                ship.health = 0;
+                game.bullets.splice(i, 1);
+                i--;
+                continue;
+            }
+
+            // Bullet with player
+            if (bullet.origin !== player) {
+                if (bullet.collidesWith(player)) {
+                    console.log("TODO: Player got hit");
+                }
+            }
+
+            // Remove out of bound bullet
+            if (bullet.state.x < -bullet.radius
+                    || bullet.state.y < -bullet.radius
+                    || bullet.state.x > game.width+bullet.radius
+                    || bullet.state.y > game.height+bullet.radius) {
+                game.bullets.splice(i, 1);
+                i--;
+            }
+        }
+    };
+
     Stage.prototype.update = function (dt) {
         // update platoons
         for (var i = 0; i < this.platoons.length; i++)
@@ -335,6 +387,9 @@ Stage = (function () {
         // update bullets
         for (var i = 0; i < game.bullets.length; i++) 
             game.bullets[i].update(dt);
+
+        // do collision detection
+        this.detectCollisions();
     };
 
     Stage.prototype.render = function (ctx) {
@@ -388,8 +443,6 @@ Stage = (function () {
 
     
     Stage.prototype.onKeyDown = function (e) {
-        console.log(e.keyCode);
-        
         if (!pressedKeys[e.keyCode]) {
             switch (e.keyCode) {
             case 37: // left arrow
@@ -461,6 +514,9 @@ Object = (function () {
         if (this.sprite) {
             this.width = this.sprite.width;
             this.height = this.sprite.height;
+            this.radiusSq = (this.width / 2) * (this.width / 2)
+                          + (this.height / 2) * (this.height / 2);
+            this.radius = Math.sqrt(this.radiusSq);
         }
     }
 
@@ -478,17 +534,27 @@ Object = (function () {
         this.state.x += dt * this.state.vel * Math.cos(this.state.theta);
         this.state.y -= dt * this.state.vel * Math.sin(this.state.theta);
         this.state.theta += dt * this.state.vtheta;
-        
-        // TODO: Collision detection
     };
 
     Object.prototype.reset = function () {};    // do nothing
+
+    Object.prototype.collidesWith = function (that) {
+        if (!this.radiusSq || !that.radiusSq) return false;
+
+        var dx = this.state.x - that.state.x;
+        var dy = this.state.y - that.state.y;
+        var distSq = dx * dx + dy * dy;
+
+        return (distSq > (this.radius+that.radius) * (this.radius+that.radius));
+    };
 
     return Object;
 })();
 
 Bullet = (function () {
-    function Bullet(x, y, vel, theta) {
+    function Bullet(origin, x, y, vel, theta) {
+        this.origin = origin;
+
         Bullet.parent.call(this, "bullet", {
             x: x,
             y: y,
@@ -505,9 +571,16 @@ Bullet = (function () {
 SpaceShip = (function () {
     function SpaceShip(type, config) {
         SpaceShip.parent.apply(this, arguments);
+        this.health = 100;
     }
 
     Util.extend(SpaceShip, Object);
+
+    SpaceShip.prototype.render = function () {
+        if (this.health > 0) {
+            SpaceShip.parent.prototype.render.apply(this, arguments);
+        }
+    };
 
     return SpaceShip;
 })();
@@ -515,7 +588,6 @@ SpaceShip = (function () {
 PlayerShip = (function () {
     function PlayerShip() {
         PlayerShip.parent.call(this, "player");
-        this.health = 100;
         this.isShooting = false;
         this.lastShot = 0;
     }
@@ -528,7 +600,7 @@ PlayerShip = (function () {
         var curTime = (new Date()).getTime();
 
         if (this.isShooting && curTime-this.lastShot > config.shooting_delay) {
-            var bullet = new Bullet(this.state.x, this.state.y, 
+            var bullet = new Bullet(this, this.state.x, this.state.y, 
                 150, this.state.theta);
 
             game.bullets.push(bullet);
@@ -609,7 +681,7 @@ Platoon = (function () {
             this.state.vtheta = 0;
         }
 
-        if (dist > this.totalHeight / 2) {
+        if (dist > this.height / 2) {
             this.state.vel = 10;
         } else {
             this.state.vel = 0;
@@ -642,8 +714,8 @@ Platoon = (function () {
     };
 
     Platoon.prototype.computeOffsets = function () {
-        this.totalHeight = 0;
-        this.totalWidth = 0;
+        this.height = 0;
+        this.width = 0;
         this.rowHeights = [];
         this.rowWidths = [];
 
@@ -660,15 +732,15 @@ Platoon = (function () {
                 this.rowWidths[i] += ship.width;
             }
 
-            this.totalHeight += this.rowHeights[i];
+            this.height += this.rowHeights[i];
             if (i > 0)
-                this.totalHeight += this.spacing;
-            if (this.rowWidths[i] > this.totalWidth)
-                this.totalWidth = this.rowWidths[i];
+                this.height += this.spacing;
+            if (this.rowWidths[i] > this.width)
+                this.width = this.rowWidths[i];
         }
 
         // Compute the relative position of each ship
-        var offsetY = -this.totalHeight / 2;
+        var offsetY = -this.height / 2;
         for (var i = 0; i < this.ships.length; i++) {
             var offsetX = -this.rowWidths[i] / 2;
             for (var j = 0; j < this.ships[i].length; j++) {
@@ -680,6 +752,30 @@ Platoon = (function () {
             }
             offsetY += this.rowHeights[i] + this.spacing;
         }
+        
+        // Compute radius for collision detection
+        this.radiusSq = (this.width / 2) * (this.width / 2)
+                      + (this.height / 2) * (this.height / 2);
+        this.radius = Math.sqrt(this.radiusSq);
+    };
+
+    Platoon.prototype.collidesWith = function (that) {
+        // First check if the platoon's bounding circle collides
+        var platoonCollides =
+            Platoon.parent.prototype.collidesWith.call(this, that);
+        if (!platoonCollides)
+            return null;
+
+        // Check which ship is colliding, if any
+        for (var i = 0; i < this.ships.length; i++) {
+            for (var j = 0; j < this.ships[i].length; j++) {
+                var ship = this.ships[i][j];
+                if (ship.health > 0 && ship.collidesWith(that))
+                    return ship;
+            }
+        }
+
+        return null;
     };
 
     return Platoon;
@@ -698,7 +794,7 @@ Sprite = (function () {
         this.image.onload = function () {
             if (!self.width) self.width = this.width;
             if (!self.height) self.height = this.height;
-            console.log("Loaded image " + self.src, self.width, self.height);
+            console.log("Loaded image " + self.src);
             cb();
         };
         this.image.src = this.src;
