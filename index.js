@@ -49,7 +49,7 @@ var Util = {
     extend: function (self, parent) {
         self.prototype = new parent();
         self.prototype.constructor = self;
-        self.parent = parent;
+        self.parent = parent.prototype;
     },
     default_arg: function (val, def) {
         if (typeof val === "undefined")
@@ -260,7 +260,7 @@ Menu = (function () {
     // press S to start, P to pause, I for instructions
 
     Menu.prototype.render = function(ctx) {
-        Menu.parent.prototype.render.call(this, ctx);
+        Menu.parent.render.call(this, ctx);
 
         ctx.fillStyle = "white";
         ctx.font = "bold 40px Arial";
@@ -294,7 +294,7 @@ Instructions = (function () {
     Util.extend(Instructions, Screen);
 
     Instructions.prototype.render = function(ctx) {
-        Instructions.parent.prototype.render.call(this, ctx);
+        Instructions.parent.render.call(this, ctx);
         // render header
         ctx.fillStyle = "white";
         ctx.font = "bold 40px Arial";
@@ -328,7 +328,7 @@ Instructions = (function () {
 
 HighScores = (function () {
     function HighScores() {
-        HighScores.parent.prototype.constructor.call(this);
+        HighScores.parent.constructor.call(this);
     }
 
     Util.extend(HighScores, Screen);
@@ -345,7 +345,7 @@ Stage = (function () {
     var statusBarOffset = 15;
 
     function Stage(platoons) {
-        Stage.parent.prototype.constructor.call(this);
+        Stage.parent.constructor.call(this);
 
         this.platoons = platoons;
     }
@@ -568,7 +568,7 @@ Stage = (function () {
     };
 
     Stage.prototype.reset = function () {
-        Stage.parent.prototype.reset.call(this);
+        Stage.parent.reset.call(this);
 
         for (var i = 0; i < this.platoons.length; i++) {
             this.platoons[i].reset();
@@ -579,6 +579,15 @@ Stage = (function () {
     };
 
     return Stage;
+})();
+
+LoseScreen = (function () {
+    function LoseScreen() {
+    }
+
+    Util.extend(LoseScreen, Screen);
+
+    return LoseScreen;
 })();
 
 /****************
@@ -646,7 +655,7 @@ Bullet = (function () {
     function Bullet(origin, x, y, vel, theta) {
         this.origin = origin;
 
-        Bullet.parent.call(this, "bullet", {
+        Bullet.parent.constructor.call(this, "bullet", {
             x: x,
             y: y,
             vel: vel,
@@ -661,7 +670,7 @@ Bullet = (function () {
 
 SpaceShip = (function () {
     function SpaceShip(type, config) {
-        SpaceShip.parent.apply(this, arguments);
+        SpaceShip.parent.constructor.apply(this, arguments);
         
         this.fullHealth = 100;
         this.lastShot = 0;
@@ -673,13 +682,13 @@ SpaceShip = (function () {
 
     SpaceShip.prototype.update = function () {
         if (this.health > 0) {
-            SpaceShip.parent.prototype.update.apply(this, arguments);
+            SpaceShip.parent.update.apply(this, arguments);
         }
     };
 
     SpaceShip.prototype.render = function () {
         if (this.health > 0) {
-            SpaceShip.parent.prototype.render.apply(this, arguments);
+            SpaceShip.parent.render.apply(this, arguments);
         }
     };
 
@@ -694,7 +703,7 @@ SpaceShip = (function () {
     };
 
     SpaceShip.prototype.reset = function () {
-        SpaceShip.parent.prototype.reset.call(this);
+        SpaceShip.parent.reset.call(this);
 
         this.health = this.fullHealth;
     };
@@ -704,7 +713,7 @@ SpaceShip = (function () {
 
 PlayerShip = (function () {
     function PlayerShip() {
-        PlayerShip.parent.call(this, "player");
+        PlayerShip.parent.constructor.call(this, "player");
         
         this.isShooting = false;
     }
@@ -712,7 +721,7 @@ PlayerShip = (function () {
     Util.extend(PlayerShip, SpaceShip);
 
     PlayerShip.prototype.update = function (dt) {
-        PlayerShip.parent.prototype.update.call(this, dt);
+        PlayerShip.parent.update.call(this, dt);
 
         var curTime = (new Date()).getTime();
         if (this.isShooting && curTime-this.lastShot > config.shooting_delay) {
@@ -721,7 +730,7 @@ PlayerShip = (function () {
     };
 
     PlayerShip.prototype.reset = function () {
-        PlayerShip.parent.prototype.reset.call(this);
+        PlayerShip.parent.reset.call(this);
 
         this.state.x = 300;
         this.state.y = 300;
@@ -746,7 +755,7 @@ Platoon = (function () {
             y: y,
             theta: theta
         };
-        Platoon.parent.call(this, "", this.start);
+        Platoon.parent.constructor.call(this, "", this.start);
 
         this.spacing = Util.default_arg(spacing, 10);
 
@@ -800,7 +809,7 @@ Platoon = (function () {
             this.state.vel = 0;
         }
 
-        Platoon.parent.prototype.update.call(this, dt);
+        Platoon.parent.update.call(this, dt);
 
         // update position of each ship in platoon
         for (var i = 0; i < this.ships.length; i++) {
@@ -828,7 +837,7 @@ Platoon = (function () {
     };
 
     Platoon.prototype.reset = function () {
-        Platoon.parent.prototype.reset.call(this);
+        Platoon.parent.reset.call(this);
 
         this.state.x = this.start.x;
         this.state.y = this.start.y;
@@ -892,7 +901,7 @@ Platoon = (function () {
     Platoon.prototype.collidesWith = function (that, padding) {
         // First check if the platoon's bounding circle collides
         var platoonCollides =
-            Platoon.parent.prototype.collidesWith.call(this, that, padding);
+            Platoon.parent.collidesWith.call(this, that, padding);
         if (!platoonCollides)
             return null;
 
