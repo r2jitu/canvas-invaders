@@ -6,8 +6,8 @@
 
 var config = {
     sprites: {
-        player: "images/player.png",
-        invader: "images/invader.png",
+        player: "images/player2.png",
+        invader: "images/invader2.png",
         bullet: "images/bullet.png"
     },
     stages: [
