@@ -300,7 +300,13 @@ Instructions = (function () {
 
 })();
 
+/**
+ *  cookie style: high_score# (where # is # of high score)
+ *  (0 base)
+ */
 HighScores = (function () {
+    var numScores = 5;  // number of stored high scores
+
     function HighScores() {}
 
     Util.extend(HighScores, Screen);
@@ -308,6 +314,18 @@ HighScores = (function () {
     HighScores.prototype.render = function(ctx) {
       console.log("render not implemented for HighScores");
     };
+
+    // Store & retrieve high scores using cookies
+    function setHighScore() {
+
+    }
+
+    function getHighScores() {
+        for (var i = 0; i < numScores; i++) {
+            var cookieData = document.cookie.split(";");
+            var cookieName = "high_score" + i;
+        }
+    }
 
     return HighScores;
 })();
