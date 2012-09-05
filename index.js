@@ -317,15 +317,28 @@ HighScores = (function () {
     };
 
     // Store & retrieve high scores using cookies
-    function setHighScore() {
-
+    // place starts w/ 0 as base
+    function setHighScore(score, place) {
+        //get 
     }
 
+    // get list of all high scores
     function getHighScores() {
+        var highScoresList = [];
         for (var i = 0; i < numScores; i++) {
-            var cookieData = document.cookie.split(";");
-            var cookieName = "high_score" + i;
+            var cookiesArr = document.cookie.split(";");
+            var highScoreKey = "high_score" + i;
+            var splitIndex = cookiesArr[i].indexOf("=");
+            var cookieKey = cookiesArr[i].substr(0, splitIndex);
+            cookieKey = cookieKey.replace(/^\s+|\s+$/g, "");
+
+            if (cookieKey = highScoreKey) {
+                var highScore = cookiesArr[i].substr(splitIndex + 1);
+                highScoresList[i] = parseInt(highScore, 10);
+            }
         }
+
+        return highScoresList;
     }
 
     return HighScores;
