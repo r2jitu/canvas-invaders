@@ -37,7 +37,7 @@ var config = {
     ],
     player_velocity: 150,
     player_angvelocity: 2 * Math.PI / 1.5,
-    shooting_delay: 250, // milliseconds
+    shooting_delay: 300, // milliseconds
     bullet_velocity: 200,
 };
 
@@ -104,7 +104,8 @@ Game = (function () {
             this.canvas.addEventListener(evname, function (evname, e) {
                 // Call the screen's handler if it has one
                 var handler = eventHandlers[evname];
-                if (typeof this.curScreen[handler] === "function") {
+                if (this.curScreen
+                        && typeof this.curScreen[handler] === "function") {
                     this.curScreen[handler](e);
                 }
             }.bind(this, evname));
@@ -182,7 +183,7 @@ Game = (function () {
         var doRender = this.curScreen.update(dt);
         
         if (doRender) {
-            this.curScreen.render(this.ctx);
+            this.curScreen.render(this.ctx, dt);
         }
     };
 
@@ -199,7 +200,7 @@ Game = (function () {
 
     Game.prototype.setScreen = function (screen_id) {
         this.curScreen = this.screens[screen_id];
-        this.curScreen.reset();
+        this.curScreen.reset(this.ctx);
         this.curStage = null;
     };
 
@@ -342,7 +343,6 @@ HighScores = (function () {
 Stage = (function () {
     // Player Status bar offset
     var statusBarOffset = 15;
-    var pressedKeys = {};
 
     function Stage(platoons) {
         Stage.parent.prototype.constructor.call(this);
@@ -388,9 +388,10 @@ Stage = (function () {
             }
 
             // Platoon with player
-            var ship = platoon.collidesWith(player);
+            var ship = platoon.collidesWith(player, platoon.spacing);
             if (ship) {
-                player.health = 0;
+                player.health = Math.max(0, player.health-25);
+                ship.health = 0;
             }
         }
 
@@ -445,12 +446,33 @@ Stage = (function () {
         // Do collision detection
         this.detectCollisions();
 
+        // Show game over if health reaches 0
+        console.log(game.player.health);
+        if (game.player.health === 0) {
+            //game.nextStage();
+            game.pause();
+            return false;
+        }
+
+        // Check if all enemies have been destroyed
+        var remainingShips = 0;
+        for (var i = 0; i < this.platoons.length; i++)
+            remainingShips += this.platoons[i].remainingShips();
+
+        // Go to next stage if all enemies are dead
+        if (remainingShips === 0) {
+            game.nextStage();
+            return false;
+        }
+
         // We always want to redraw
         return true;
     };
 
-    Stage.prototype.render = function (ctx) {
-        Stage.parent.prototype.render.call(this, ctx);
+    Stage.prototype.render = function (ctx, dt) {
+        var alpha = Math.max(0.75 - 0.01 / dt, 0);
+        ctx.fillStyle = "rgba(0, 0, 0, " + alpha + ")";
+        ctx.fillRect(0, 0, game.width, game.height);
 
         renderBg(ctx);
         renderStats(ctx);
@@ -500,7 +522,7 @@ Stage = (function () {
 
     
     Stage.prototype.onKeyDown = function (e) {
-        if (!pressedKeys[e.keyCode]) {
+        if (!this.pressedKeys[e.keyCode]) {
             switch (e.keyCode) {
             case 37: // left arrow
                 game.player.state.vtheta += config.player_angvelocity;
@@ -520,7 +542,7 @@ Stage = (function () {
             }
         }
 
-        pressedKeys[e.keyCode] = true;
+        this.pressedKeys[e.keyCode] = true;
     };
 
     Stage.prototype.onKeyUp = function (e) {
@@ -542,7 +564,7 @@ Stage = (function () {
             break;
         }
 
-        pressedKeys[e.keyCode] = false;
+        this.pressedKeys[e.keyCode] = false;
     };
 
     Stage.prototype.reset = function () {
@@ -551,6 +573,9 @@ Stage = (function () {
         for (var i = 0; i < this.platoons.length; i++) {
             this.platoons[i].reset();
         }
+
+        this.pressedKeys = {};
+        this.lastFrameImage = null;
     };
 
     return Stage;
@@ -601,14 +626,17 @@ Object = (function () {
 
     Object.prototype.reset = function () { /* Do nothing */ };
 
-    Object.prototype.collidesWith = function (that) {
+    Object.prototype.collidesWith = function (that, padding) {
         if (!this.radius || !that.radius) return false;
+        
+        padding = Util.default_arg(padding, 0);
 
         var dx = this.state.x - that.state.x;
         var dy = this.state.y - that.state.y;
         var distSq = dx * dx + dy * dy;
+        var limit = this.radius + that.radius + padding;
 
-        return (distSq < (this.radius+that.radius) * (this.radius+that.radius));
+        return (distSq < limit * limit);
     };
 
     return Object;
@@ -719,7 +747,7 @@ Platoon = (function () {
             theta: theta
         };
         Platoon.parent.call(this, "", this.start);
-        
+
         this.spacing = Util.default_arg(spacing, 10);
 
         this.ships = [];
@@ -861,10 +889,10 @@ Platoon = (function () {
                                 + (this.height / 2) * (this.height / 2));
     };
 
-    Platoon.prototype.collidesWith = function (that) {
+    Platoon.prototype.collidesWith = function (that, padding) {
         // First check if the platoon's bounding circle collides
         var platoonCollides =
-            Platoon.parent.prototype.collidesWith.call(this, that);
+            Platoon.parent.prototype.collidesWith.call(this, that, padding);
         if (!platoonCollides)
             return null;
 
