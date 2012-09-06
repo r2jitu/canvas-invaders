@@ -1,6 +1,6 @@
 /*\
 |*| Canvas Invaders
-|*| By Jitu Das & Bertha Lam
+|*| By Jitu Das (cdas) & Bertha Lam (chingwal)
 |*| CMU 15-237 Cross-platform Mobile Web Apps, Fall 2012
 \*/
 
