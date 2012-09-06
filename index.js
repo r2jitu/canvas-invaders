@@ -800,7 +800,6 @@ Stage = (function () {
 
     // Renders user data (score, lives, weapon)
     function renderStats(ctx) {
-        // TODO: render black box for stats
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, game.width, game_config.header_height);
 
