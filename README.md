@@ -7,7 +7,18 @@ CMU 15-237 Cross-platform Mobile Web Apps, Fall 2012
 How To Play
 -----------
 
+This game is a 2D shooter. You control a spaceship that can shoot bullets,
+rotate left and right, and move forwards and backwards. To shoot bullets, 
+press/hold down the spacebar key. To rotate left or right, hold down the left
+or right arrow key respectively. To move forwards or backwards, hold down the up
+or down arrow key respectively.
 
+You start off with 100 health. If you get hit by a bullet, you lose 5 health,
+and if you crash into an enemy spaceship, you lose 25 health. 
+
+For every enemy spaceship that you kill, your score goes up by 5 points. Your 
+final score is the points you gain from killing enemy ships plus any remaining 
+health you have.
 
 
 Design Overview
