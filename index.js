@@ -7,9 +7,75 @@
 var game_config = {
     canvas: "game",
     sprites: {
-        player: "images/player2.png",
-        invader: "images/invader2.png",
-        bullet: "images/bullet.png"
+        bullet: {
+            width: 5,
+            height: 20,
+            shapes: [
+                'color',    'white',
+                'rect',     [ 0, 2.5, 5, 7.5 ],
+                'arc',      [ 2.5, 2.5, 2.5, 0, Math.PI, true ]
+            ]
+        },
+        player: {
+            width: 32,
+            height: 22,
+            shapes: [
+                'color',    'white',
+                
+                // Left pillar
+                'rect',     [ 0, 6, 8, 12 ],
+                'rect',     [ 1, 3, 6, 3 ],
+                'rect',     [ 3, 0, 2, 3 ],
+
+                // Center pillar
+                'rect',     [ 9, 11, 14, 7 ],
+                'rect',     [ 12, 8, 8, 3 ],
+                'rect',     [ 13, 7, 6, 1 ],
+                'rect',     [ 14, 6, 4, 1 ],
+                'rect',     [ 15, 5, 2, 1 ],
+                
+                // Right pillar
+                'rect',     [ 24+0, 6, 8, 12 ],
+                'rect',     [ 24+1, 3, 6, 3 ],
+                'rect',     [ 24+3, 0, 2, 3 ],
+
+                // Bottom
+                'rect',     [ 0, 18, 32, 4 ],
+            ]
+        },
+        invader: {
+            width: 28,
+            height: 31,
+            shapes: [
+                'color',    'white',
+
+                'rect',     [ 13, 0, 2, 1 ],
+                'rect',     [ 12, 1, 4, 1 ],
+                'rect',     [ 11, 2, 6, 2 ],
+                'rect',     [ 10, 4, 8, 2 ],
+                'rect',     [ 9, 6, 10, 4 ],
+                'rect',     [ 8, 10, 12, 2 ],
+                'rect',     [ 7, 12, 14, 2 ],
+                'rect',     [ 5, 14, 18, 1 ],
+                'rect',     [ 4, 15, 20, 1 ],
+                'rect',     [ 2, 16, 24, 2 ],
+                'rect',     [ 0, 18, 28, 8 ],
+                'rect',     [ 1, 26, 25, 1 ],
+                'rect',     [ 1, 27, 7, 1 ],
+                'rect',     [ 3, 28, 3, 2 ],
+                'rect',     [ 19+1, 27, 7, 1 ],
+                'rect',     [ 19+3, 28, 3, 2 ],
+                'rect',     [ 9, 27, 11, 1 ],
+                'rect',     [ 10, 28, 8, 2 ],
+                'rect',     [ 12, 30, 4, 1 ],
+
+                'color',    'black',
+                
+                'rect',     [ 13, 4, 2, 1 ],
+                'rect',     [ 12, 5, 4, 2 ],
+                'rect',     [ 11, 7, 6, 1 ],
+            ]
+        }
     },
     stages: [
         {
@@ -159,6 +225,7 @@ Game = (function () {
         this.height = this.canvas.height;
 
         this.stars = generateStars(this.width, this.height);
+        this.sprites = {};
 
         // Player stats
         this.player = null;
@@ -218,27 +285,8 @@ Game = (function () {
         return stars;
     }
 
-    // Loads a list of sprites in parallel. Calls cb when all are done loading.
-    Game.prototype.loadSprites = function (paths, cb) {
-        var sprites = {};
-        var remain_sprites = 0;
-        
-        this.sprites = sprites;
-
-        function finished() {
-            remain_sprites--;
-            if (remain_sprites === 0) {
-                cb(sprites);
-            }
-        }
-
-        for (var p in paths) {
-            (function (p) {
-                sprites[p] = new Sprite(paths[p]);
-                remain_sprites++;
-                setTimeout(function () { sprites[p].load(finished); }, 0);
-            })(p);
-        }
+    Game.prototype.addSprite = function (name, sprite) {
+        this.sprites[name] = sprite;
     };
 
     Game.prototype.start = function (screen_id) {
@@ -930,7 +978,8 @@ Object = (function () {
             ctx.save();
             ctx.translate(this.state.x, this.state.y);
             ctx.rotate(-this.state.theta + Math.PI / 2);
-            ctx.drawImage(this.sprite.image, -this.width/2, -this.height/2);
+            ctx.translate(-this.width/2, -this.height/2)
+            this.sprite.render(ctx);
             ctx.restore();
         }
     };
@@ -1294,22 +1343,31 @@ Explosion = (function () {
 })();
 
 Sprite = (function () {
-    function Sprite(src, width, height) {
-        this.src = src;
-        this.width = Util.default_arg(width, 0);
-        this.height = Util.default_arg(height, 0);
+    function Sprite(config) {
+        this.width = config.width;
+        this.height = config.height;
+        this.shapes = config.shapes;
     }
 
-    Sprite.prototype.load = function (cb) {
-        var self = this;
-        this.image = new Image();
-        this.image.onload = function () {
-            if (!self.width) self.width = this.width;
-            if (!self.height) self.height = this.height;
-            console.log("Loaded image " + self.src);
-            cb();
-        };
-        this.image.src = this.src;
+    Sprite.prototype.render = function (ctx) {
+        for (var i = 0; i < this.shapes.length; i += 2) {
+            var type = this.shapes[i];
+            var params = this.shapes[i+1];
+
+            switch (type) {
+            case "color":
+                ctx.fillStyle = params;
+                break;
+            case "rect":
+                ctx.fillRect.apply(ctx, params);
+                break;
+            case "arc":
+                ctx.beginPath();
+                ctx.arc.apply(ctx, params);
+                ctx.fill();
+                break;
+            }
+        }
     };
 
     return Sprite;
@@ -1322,31 +1380,34 @@ Sprite = (function () {
 function init() {
     game = new Game(game_config.canvas, 60);
 
-    game.loadSprites(game_config.sprites, function () {
-        game.player = new PlayerShip();
+    for (var name in game_config.sprites) {
+        var sprite = game_config.sprites[name];
+        game.addSprite(name, new Sprite(sprite));
+    }
 
-        game.addScreen("menu", new Menu());
-        game.addScreen("instructions", new Instructions());
-        game.addScreen("highscores", new HighScores());
-        game.addScreen("gameover", new GameOverScreen());
+    game.player = new PlayerShip();
 
-        game_config.stages.forEach(function (stage_config) {
-            var platoons = [];
-            stage_config.platoons.forEach(function (platoon_config) {
-                platoons.push(
-                    new Platoon(
-                        platoon_config.x,
-                        platoon_config.y,
-                        platoon_config.theta,
-                        platoon_config.layout
-                    )
-                );
-            });
-            game.addStage(new Stage(platoons));
+    game.addScreen("menu", new Menu());
+    game.addScreen("instructions", new Instructions());
+    game.addScreen("highscores", new HighScores());
+    game.addScreen("gameover", new GameOverScreen());
+
+    game_config.stages.forEach(function (stage_config) {
+        var platoons = [];
+        stage_config.platoons.forEach(function (platoon_config) {
+            platoons.push(
+                new Platoon(
+                    platoon_config.x,
+                    platoon_config.y,
+                    platoon_config.theta,
+                    platoon_config.layout
+                )
+            );
         });
-
-        game.start("menu");
+        game.addStage(new Stage(platoons));
     });
+
+    game.start("menu");
 }
 
 window.onload = init;
