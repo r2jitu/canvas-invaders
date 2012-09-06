@@ -20,6 +20,9 @@ For every enemy spaceship that you kill, your score goes up by 5 points. Your
 final score is the points you gain from killing enemy ships plus any remaining 
 health you have.
 
+There is a high scores table that stores the top 5 scores in a cookie, and 
+users can input their name for their high score entries.
+
 
 Design Overview
 ---------------

@@ -194,11 +194,14 @@ Game = (function () {
         this.canvas.setAttribute("tabindex", 0);
         this.canvas.focus();
     }
-    
+   
+    // Generates (x, y) coordindates for the background stars as well as
+    // an alpha value from 0.5 to 1
     function generateStars(width, height) {
-        var numStars = 50;
+        var numStars = 50; // number of stars in background
         var stars = new Array();
 
+        // star (x, y) & alpha value generation
         for (var i = 0; i < numStars; i++) {
             var xPos = Math.floor(Math.random() * width);
             var yPos = Math.floor(Math.random() * height + 15);
@@ -322,7 +325,7 @@ Screen = (function () {
         }
     };
 
-    // clears the screen
+    // Clears the screen by filling it with black
     Screen.prototype.render = function(ctx) {
         ctx.fillStyle = game.bgColor;
         ctx.fillRect(0, 0, 600, 600);
@@ -335,34 +338,39 @@ Screen = (function () {
     return Screen;
 })();
 
+/**
+ *  Game Start Menu
+ */
 Menu = (function () {
     function Menu() {}
 
     Util.extend(Menu, Screen);
 
-    // press S to start, P to pause, I for instructions
-
+    // Renders the menu screen
     Menu.prototype.render = function(ctx) {
         Menu.parent.render.call(this, ctx);
 
+        // Title
         ctx.fillStyle = "white";
         ctx.font = "bold 40px Arial";
         ctx.textBaseline = "middle";
         ctx.textAlign = "center";
         ctx.fillText("Canvas Invaders", game.width / 2, 70);
 
+        // Game Options
         ctx.font = "bold 30px Arial";
         ctx.fillText("Start Game (s)", game.width / 2, 270);
         ctx.fillText("Instructions (i)", game.width / 2, 320);
     };
 
+    // Handles keyboard presses
     Menu.prototype.onKeyPress = function(e) {
-        // handle user input
-        //console.log("keycode", e.charCode, String.fromCharCode(e.charCode));
+        // "s" starts the game
         if (String.fromCharCode(e.charCode) === "s") {
             game.reset();
             game.setStage(0);
         }
+        // "i" goes to the instructions screen
         else if (String.fromCharCode(e.charCode) === "i") {
             game.setScreen("instructions");
         }
@@ -371,21 +379,26 @@ Menu = (function () {
     return Menu;
 })();
 
+/** 
+ *  Instructions Screen
+ *  Tells users how to play the game, static screen
+ */
 Instructions = (function () {
     function Instructions() {}
 
     Util.extend(Instructions, Screen);
 
+    // Renders actual instructions to screen
     Instructions.prototype.render = function(ctx) {
         Instructions.parent.render.call(this, ctx);
-        // render header
+        // Render header
         ctx.fillStyle = "white";
         ctx.font = "bold 40px Arial";
         ctx.textBaseline = "middle";
         ctx.textAlign = "center";
         ctx.fillText("Instructions", game.width / 2, 70);
 
-        // render actual instructions
+        // Render actual instructions
         ctx.font = "25px Arial";
         ctx.fillText("Up Arrow - Move forward", game.width / 2, 200);
         ctx.fillText("Down Arrow - Move backwards", game.width / 2, 230);
@@ -399,7 +412,7 @@ Instructions = (function () {
 
     // Handle user keyboard input
     Instructions.prototype.onKeyPress = function(e) {
-        // 'b', escape, backspace will go back to menu
+        // "b" will go back to menu
         if (String.fromCharCode(e.charCode) === "b") {
            game.setScreen("menu"); 
         }
@@ -409,6 +422,13 @@ Instructions = (function () {
 
 })();
 
+/**
+ *  High Scores screen
+ *  Shows player's final score and  top 5 (or less) scores.
+ *  Prompts player for name and adds a new entry to the high scores
+ *  list if the player made it to the high scores.
+ *  High scores are stored in a cookie that expires in 10 days
+ */
 HighScores = (function () {
     var maxNumScores = 5;  // number of stored high scores
     var highScoresKey = "high_scores"; // name of high scores cookie
@@ -419,6 +439,7 @@ HighScores = (function () {
 
     Util.extend(HighScores, Screen);
 
+    // Render high score contents and handles adding players to high scores
     HighScores.prototype.render = function (ctx) {
         HighScores.parent.render.call(this, ctx);
 
@@ -429,21 +450,24 @@ HighScores = (function () {
         // Add player health to total score
         game.playerScore += game.player.health;
 
+        // Only attempt to add player to high scores if score > 0
         if (game.playerScore > 0) 
             updateHighScores(game.playerScore);
         
         renderHighScores(ctx);
     };
 
+    // Takes player back to start menu w/ any keypress
     HighScores.prototype.onKeyDown = function (e) {
         game.setScreen("menu");
         e.preventDefault();
     };
     
+    // Renders contents of high score screen
     function renderHighScores(ctx) {
         var highScores = getHighScores();
 
-        // Render player score
+        // Render win/lose results
         ctx.font = "bold 40px Arial";
         var endMsg;
         if (game.player.health === 0)
@@ -453,13 +477,14 @@ HighScores = (function () {
 
         ctx.fillText(endMsg, game.width / 2, 50);
 
+        // Render player score
         ctx.font = "bold 30px Arial";
         ctx.fillText("Your Score: " + game.playerScore, game.width / 2, 190);
 
+        // Render high scores list
         ctx.font = "bold 25px Arial";
         ctx.fillText("High Scores: ", game.width / 2, game.height / 2);
 
-        // Render high scores list
         ctx.font = "20px Arial";
         var fontHeight = game.height / 2 + 40;
         for (var i = highScores.length - 1; i >= 0; i--) {
@@ -469,27 +494,29 @@ HighScores = (function () {
             fontHeight += 25;
         }
 
+        // Render user instructions
         ctx.font = "bold 25px Arial";
         ctx.fillText("Press any key to continue.", game.width / 2, fontHeight + 50);
     }
 
-    // checks to see if player got new high score
-    // true conditions:
-    // 1) num high scores < maxNumScores
-    // 2) lowest high score < score
+    // Checks to see if player got new high score
     function checkHighScores(score) {
         var highScores = getHighScores();
 
+        // # high scores < max. number of high scores
         if (highScores.length < maxNumScores)
             return true;
-        
+       
+        // lowest high score < player score
         if (highScores[0].score < score)
             return true;
 
         return false;
     }
 
-    // Insert new high score entry at right place
+    // Insert new high score entry at right place in relation to other high
+    // scores.
+    // High score entries are in the form {name: n, score: s}
     function insertHighScore(name, score) {
         var highScores = getHighScores();
         var entry = {
@@ -518,9 +545,9 @@ HighScores = (function () {
         return highScores;
     }
 
-    // Store & retrieve high scores using cookies
-    // place starts w/ 0 as base
-    // does nothing if no score to set
+    // Update high scores by inserting (if necessary) player score,
+    // updating the high scores list, and then writing this data out to a
+    // cookie
     function updateHighScores(score) {
         // scores expire in 10 days
         var expireDate = new Date();
@@ -541,7 +568,7 @@ HighScores = (function () {
         }
     }
          
-    // get list of all high scores, returns from highest to lowest
+    // Get list of all high scores by extracting from cookie
     function getHighScores() {
         var cookiesArr = document.cookie.split(";");
         
@@ -752,10 +779,11 @@ Stage = (function () {
 
     // Renders user data (score, lives, weapon)
     function renderStats(ctx) {
-        // TODO: render black box for stats
+        // draw black cleared area for player stats
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, game.width, game_config.header_height);
 
+        // text styling
         ctx.fillStyle = "white";
         ctx.font = "bold 15px Arial";
         ctx.textBaseline = "middle";
@@ -774,7 +802,8 @@ Stage = (function () {
         ctx.fillText(game.player.health, livesOffset, 15);
     }
 
-    
+    // Handle user key down presses; initiates ship movement & rotation and
+    // starting bullet fire 
     Stage.prototype.onKeyDown = function (e) {
         if (!game.pressedKeys[e.keyCode]) {
             switch (e.keyCode) {
@@ -797,6 +826,8 @@ Stage = (function () {
         }
     };
 
+    // Handles user key up presses; stops ship movement & rotation and
+    // stopping bullet fire
     Stage.prototype.onKeyUp = function (e) {
         switch (e.keyCode) {
         case 37: // left arrow
@@ -817,6 +848,7 @@ Stage = (function () {
         }
     };
 
+    // Sets stage to original state
     Stage.prototype.reset = function () {
         Stage.parent.reset.call(this);
 
@@ -828,12 +860,18 @@ Stage = (function () {
     return Stage;
 })();
 
+/**
+ *  Game over screen
+ *  Shown to player when he/she wins or loses. Stays on for 3s before
+ *  showing the high scores screen
+ */
 GameOverScreen = (function () {
     function GameOverScreen() {
     }
 
     Util.extend(GameOverScreen, Screen);
-
+    
+    // Renders the game over screen
     GameOverScreen.prototype.render = function (ctx) {
         // black overlay
         ctx.fillStyle = "rgba(0,0,0,0.7)";
@@ -848,6 +886,7 @@ GameOverScreen = (function () {
 
         ctx.fillText("Game Over", game.width / 2, game.height / 2);
 
+        // go to high scores screen after 3s
         setTimeout(function () {
             game.setScreen("highscores");
         }, 3000);
@@ -860,6 +899,9 @@ GameOverScreen = (function () {
  * OBJECT LOGIC *
  ****************/
 
+/**
+ *  Generic class for all physical entities in the game
+ */
 Object = (function () {
     function Object(sprite_id, config) {
         if (typeof sprite_id !== "string") return;
