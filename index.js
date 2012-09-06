@@ -161,7 +161,6 @@ Game = (function () {
         this.stars = generateStars(this.width, this.height);
 
         // Player stats
-        this.playerScore = 0;
         this.player = null;
         this.bullets = [];
         this.explosions = [];
@@ -303,6 +302,7 @@ Game = (function () {
     Game.prototype.reset = function () {
         this.bullets = [];
         this.explosions = [];
+        this.playerScore = 0;
         this.player.reset();
     };
 
@@ -410,6 +410,9 @@ Instructions = (function () {
 })();
 
 HighScores = (function () {
+    var maxNumScores = 5;  // number of stored high scores
+    var highScoresKey = "high_scores"; // name of high scores cookie
+
     function HighScores() {
         HighScores.parent.constructor.call(this);
     }
@@ -419,14 +422,139 @@ HighScores = (function () {
     HighScores.prototype.render = function (ctx) {
         HighScores.parent.render.call(this, ctx);
 
-        // TODO: Render high scores
         ctx.fillStyle = "white";
-        ctx.fillText("Game over. High scores here. Press any key to continue.", 50, 50);
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+       
+        // Add player health to total score
+        game.playerScore += game.player.health; 
+        updateHighScores(game.playerScore);
+        renderHighScores(ctx);
     };
 
-    HighScores.prototype.onKeyPress = function (e) {
+    HighScores.prototype.onKeyDown = function (e) {
         game.setScreen("menu");
     };
+    
+    function renderHighScores(ctx) {
+        var highScores = getHighScores();
+
+        // Render player score
+        ctx.font = "bold 40px Arial";
+        var endMsg;
+        if (game.player.health === 0)
+            endMsg = "You Lost!";
+        else
+            endMsg = "You Won!";
+
+        ctx.fillText(endMsg, game.width / 2, 50);
+
+        ctx.font = "bold 30px Arial";
+        ctx.fillText("Your Score: " + game.playerScore, game.width / 2, 190);
+
+        ctx.font = "bold 25px Arial";
+        ctx.fillText("High Scores: ", game.width / 2, game.height / 2);
+
+        // Render high scores list
+        ctx.font = "20px Arial";
+        var fontHeight = game.height / 2 + 40;
+        for (var i = highScores.length - 1; i >= 0; i--) {
+            ctx.fillText(highScores[i].name + ": " + highScores[i].score, 
+                game.width / 2, fontHeight);
+            
+            fontHeight += 25;
+        }
+
+        ctx.font = "bold 25px Arial";
+        ctx.fillText("Press any key to continue.", game.width / 2, fontHeight + 50);
+    }
+
+    // checks to see if player got new high score
+    // true conditions:
+    // 1) num high scores < maxNumScores
+    // 2) lowest high score < score
+    function checkHighScores(score) {
+        var highScores = getHighScores();
+
+        if (highScores.length < maxNumScores)
+            return true;
+        
+        if (highScores[0].score < score)
+            return true;
+
+        return false;
+    }
+
+    // Insert new high score entry at right place
+    function insertHighScore(name, score) {
+        var highScores = getHighScores();
+        var entry = {
+            name: name,
+            score: score
+        };
+        var inserted = false;
+
+        // insert high score in right order
+        for (var i = 0; i < highScores.length; i++) {
+            if (highScores[i].score > score) {
+                highScores.splice(i, 0, entry);
+                inserted = true;
+                break;
+            }
+        }
+
+        if (!inserted) 
+            highScores.push(entry);
+
+        // remove lowest entry if necessary
+        if (highScores.length > maxNumScores) {
+            highScores.shift();
+        }
+
+        return highScores;
+    }
+
+    // Store & retrieve high scores using cookies
+    // place starts w/ 0 as base
+    // does nothing if no score to set
+    function updateHighScores(score) {
+        // scores expire in 10 days
+        var expireDate = new Date();
+        expireDate.setTime(expireDate.getTime() + 10 * 24 * 60 * 60 * 1000);
+       
+        // only update high scores with valid entry
+        if (checkHighScores(score)) {
+            // prompt user for name
+            var name = prompt("Congratulations! You got a new high score!", 
+            "Player");
+
+            var highScores = insertHighScore(name, score);
+            var value = escape(JSON.stringify(highScores)) + ";expires=" + 
+                expireDate.toUTCString();
+            
+            console.log(highScoresKey + "=" + value);
+            document.cookie = highScoresKey + "=" + value;
+        }
+    }
+         
+    // get list of all high scores, returns from highest to lowest
+    function getHighScores() {
+        var cookiesArr = document.cookie.split(";");
+        
+        for (var i = 0; i < cookiesArr.length; i++) {
+            var splitIndex = cookiesArr[i].indexOf("=");
+            var curCookieKey = cookiesArr[i].substr(0, splitIndex);
+            curCookieKey = curCookieKey.replace(/^\s+|\s+$/g, "");
+
+            if (curCookieKey === highScoresKey) {
+                var highScores = cookiesArr[i].substr(splitIndex + 1);
+                return JSON.parse(unescape(highScores));
+            }
+        }
+
+        // make new high scores if no high scores yet
+        return [];
+    }
 
     return HighScores;
 })();
@@ -509,6 +637,10 @@ Stage = (function () {
                         bullet.state.x,
                         bullet.state.y
                     ));
+                    
+                    // increment player score
+                    game.playerScore += 5;
+
                     continue;
                 }
             } else if (player.health > 0) {
@@ -561,7 +693,6 @@ Stage = (function () {
 
         // Show game over if health reaches 0
         if (game.player.health === 0) {
-            //game.nextStage();
             game.setScreen("lose");
             return true;
         }
@@ -702,10 +833,10 @@ LoseScreen = (function () {
     LoseScreen.prototype.render = function (ctx) {
         // TODO: Render lose screen
         ctx.fillText("You lose. Press any key to continue.", 50, 50);
-    };
 
-    LoseScreen.prototype.onKeyPress = function (e) {
-        game.setScreen("highscores");
+        setTimeout(function () {
+            game.setScreen("highscores");
+        }, 3000);
     };
 
     return LoseScreen;
