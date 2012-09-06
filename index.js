@@ -295,7 +295,7 @@ Game = (function () {
         if (this.curStage < this.stages.length) {
             this.setStage(this.curStage);
         } else {
-            this.setScreen("highscores");
+            this.setScreen("gameover");
         }
     };
 
@@ -832,7 +832,18 @@ GameOverScreen = (function () {
     Util.extend(GameOverScreen, Screen);
 
     GameOverScreen.prototype.render = function (ctx) {
-        ctx.fillText("Game over. Press any key to continue.", 50, 50);
+        // black overlay
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(0, game_config.header_height, game.width, 
+            game.height - game_config.header_height);
+
+        // text
+        ctx.fillStyle = "white";
+        ctx.font = "bold 40px Arial";
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+
+        ctx.fillText("Game Over", game.width / 2, game.height / 2);
 
         setTimeout(function () {
             game.setScreen("highscores");
