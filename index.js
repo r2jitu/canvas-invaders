@@ -186,7 +186,7 @@ Game = (function () {
                 } else if (evname === "keyup") {
                     this.pressedKeys[e.keyCode] = false;
                 }
-            }.bind(this, evname));
+            }.bind(this, evname), false);
         }
 
         this.pressedKeys = {};
@@ -434,6 +434,7 @@ HighScores = (function () {
 
     HighScores.prototype.onKeyDown = function (e) {
         game.setScreen("menu");
+        e.preventDefault();
     };
     
     function renderHighScores(ctx) {
@@ -693,7 +694,7 @@ Stage = (function () {
 
         // Show game over if health reaches 0
         if (game.player.health === 0) {
-            game.setScreen("lose");
+            game.setScreen("gameover");
             return true;
         }
 
@@ -824,22 +825,21 @@ Stage = (function () {
     return Stage;
 })();
 
-LoseScreen = (function () {
-    function LoseScreen() {
+GameOverScreen = (function () {
+    function GameOverScreen() {
     }
 
-    Util.extend(LoseScreen, Screen);
+    Util.extend(GameOverScreen, Screen);
 
-    LoseScreen.prototype.render = function (ctx) {
-        // TODO: Render lose screen
-        ctx.fillText("You lose. Press any key to continue.", 50, 50);
+    GameOverScreen.prototype.render = function (ctx) {
+        ctx.fillText("Game over. Press any key to continue.", 50, 50);
 
         setTimeout(function () {
             game.setScreen("highscores");
         }, 3000);
     };
 
-    return LoseScreen;
+    return GameOverScreen;
 })();
 
 /****************
@@ -1272,7 +1272,7 @@ function init() {
         game.addScreen("menu", new Menu());
         game.addScreen("instructions", new Instructions());
         game.addScreen("highscores", new HighScores());
-        game.addScreen("lose", new LoseScreen());
+        game.addScreen("gameover", new GameOverScreen());
 
         game_config.stages.forEach(function (stage_config) {
             var platoons = [];
