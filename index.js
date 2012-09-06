@@ -827,7 +827,10 @@ Stage = (function () {
 
     // Renders user data (score, lives, weapon)
     function renderStats(ctx) {
+<<<<<<< HEAD
         // draw black cleared area for player stats
+=======
+>>>>>>> 52ef3e09c7a755bca1cdda9626548d060405859c
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, game.width, game_config.header_height);
 
