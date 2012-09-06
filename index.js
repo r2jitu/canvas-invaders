@@ -1008,6 +1008,10 @@ Object = (function () {
     return Object;
 })();
 
+/**
+ *  Bullet
+ *  Class for the bullets that are shot by all spaceships
+ */
 Bullet = (function () {
     function Bullet(origin, x, y, vel, theta) {
         this.origin = origin;
@@ -1025,6 +1029,10 @@ Bullet = (function () {
     return Bullet;
 })();
 
+/**
+ *  Spaceship
+ *  Class for all spaceships in the game. 
+ */
 SpaceShip = (function () {
     function SpaceShip(type, config) {
         SpaceShip.parent.constructor.apply(this, arguments);
@@ -1071,6 +1079,9 @@ SpaceShip = (function () {
     return SpaceShip;
 })();
 
+/**
+ *  PlayerShip
+ */
 PlayerShip = (function () {
     function PlayerShip() {
         PlayerShip.parent.constructor.call(this, "player");
