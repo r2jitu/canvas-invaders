@@ -945,10 +945,13 @@ SpaceShip = (function () {
     };
 
     SpaceShip.prototype.fireBullet = function (curTime) {
-        var bullet = new Bullet(this, this.state.x, this.state.y, 
-            game_config.bullet_velocity, this.state.theta);
-        
-        game.bullets.push(bullet);
+        // Bullet fires slightly in the direction of the ship
+        var bx = (this.height / 2) * Math.cos(this.state.theta) + this.state.x;
+        var by = -(this.height / 2) * Math.sin(this.state.theta) + this.state.y;
+        var bvel = game_config.bullet_velocity;
+        var btheta = this.state.theta;
+
+        game.bullets.push(new Bullet(this, bx, by, bvel, btheta));
         
         if (!curTime) curTime = (new Date()).getTime();
         this.lastShot = curTime;
