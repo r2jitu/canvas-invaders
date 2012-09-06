@@ -475,8 +475,11 @@ HighScores = (function () {
         ctx.textAlign = "center";
        
         // Add player health to total score
-        game.playerScore += game.player.health; 
-        updateHighScores(game.playerScore);
+        game.playerScore += game.player.health;
+
+        if (game.playerScore > 0) 
+            updateHighScores(game.playerScore);
+        
         renderHighScores(ctx);
     };
 
